@@ -17,6 +17,29 @@ type SiteSettings = {
 
 type HomePageContent = {
   heroImageUrl?: string;
+  gatewayEyebrow:string;gatewayTitle:string;gatewayAccent:string;gatewayDescription:string;
+  storyEyebrow:string;storyTitle:string;storyAccent:string;storyBody:string;storyImageUrl?:string;
+  menuIntroEyebrow:string;menuIntroTitle:string;menuIntroAccent:string;
+  menuCard1Eyebrow:string;menuCard1Title:string;menuCard1ImageUrl?:string;
+  menuCard2Eyebrow:string;menuCard2Title:string;menuCard2ImageUrl?:string;
+  menuCard3Eyebrow:string;menuCard3Title:string;menuCard3ImageUrl?:string;
+  foodMenuTitle:string;foodMenuDescription:string;foodMenuDisclaimer:string;
+  drinkEyebrow:string;drinkTitle:string;drinkAccent:string;drinkDescription:string;drinkDisclaimer:string;
+  featureEyebrow:string;featureTitle:string;featureAccent:string;featureBody:string;featureImageUrl?:string;
+  privateDiningEyebrow:string;privateDiningTitle:string;privateDiningAccent:string;privateDiningBody:string;privateDiningImageUrl?:string;privateDiningCaption:string;
+  connectEyebrow:string;connectTitle:string;connectAccent:string;footerTagline:string;footerCopyright:string;
+};
+
+const DEFAULT_HOME: HomePageContent = {
+  gatewayEyebrow:"Welcome to Kitchen Master",gatewayTitle:"Choose your",gatewayAccent:"location.",gatewayDescription:"Menus, reservations, hours, and restaurant details are tailored to your selected Kitchen Master.",
+  storyEyebrow:"Our philosophy",storyTitle:"Old-world technique.",storyAccent:"New-world spirit.",storyBody:"At Kitchen Master, Taiwanese and Japanese traditions meet a modern American point of view. Every fold, slice, and sizzle reflects our dedication to craft, flavor, and ingredients prepared fresh each day.",storyImageUrl:"/images/dining.png",
+  menuIntroEyebrow:"What we’re known for",menuIntroTitle:"Made with patience.",menuIntroAccent:"Remembered by flavor.",
+  menuCard1Eyebrow:"The signature",menuCard1Title:"Soup Dumplings",menuCard1ImageUrl:"/images/soup-dumplings.png",menuCard2Eyebrow:"From the wok",menuCard2Title:"Modern Plates",menuCard2ImageUrl:"/images/lamb-chop.png",menuCard3Eyebrow:"Made to share",menuCard3Title:"Small Plates",menuCard3ImageUrl:"/images/szechuan-wonton.png",
+  foodMenuTitle:"The full menu.",foodMenuDescription:"Handcrafted daily. Menu availability and pricing may change. Please tell your server about any allergies before ordering.",foodMenuDisclaimer:"V · Vegetarian|Raw · May be served raw or undercooked|Parties of six or more are subject to 20% gratuity",
+  drinkEyebrow:"From the bar",drinkTitle:"Pour something",drinkAccent:"memorable.",drinkDescription:"House cocktails inspired by Asian flavors, a considered wine and sake list, and thoughtful zero-proof drinks.",drinkDisclaimer:"Must be 21+ with valid identification|Selections and vintages may change|Please enjoy responsibly",
+  featureEyebrow:"Dinner, done differently",featureTitle:"A table worth",featureAccent:"gathering around.",featureBody:"From a quick dinner to a long celebration, every meal is made to be shared.",featureImageUrl:"/images/spread.jpg",
+  privateDiningEyebrow:"Private dining",privateDiningTitle:"Your occasion.",privateDiningAccent:"Our craft.",privateDiningBody:"Host an intimate dinner or a full celebration in a space designed for memorable meals. Our team will help shape the room and menu around your event.",privateDiningImageUrl:"/images/private-room.png",privateDiningCaption:"Private rooms · Custom menus · Personal service",
+  connectEyebrow:"More from Kitchen Master",connectTitle:"Come be part",connectAccent:"of the story.",footerTagline:"Tradition meets innovation.",footerCopyright:"© 2026 Kitchen Master",
 };
 
 const DEFAULT_SITE_SETTINGS: SiteSettings = {
@@ -78,12 +101,6 @@ const DEFAULT_LOCATIONS: RestaurantLocation[] = [
   },
 ];
 
-const menuCards = [
-  { title: "Soup Dumplings", eyebrow: "The signature", image: "/images/soup-dumplings.png" },
-  { title: "Modern Plates", eyebrow: "From the wok", image: "/images/lamb-chop.png" },
-  { title: "Small Plates", eyebrow: "Made to share", image: "/images/szechuan-wonton.png" },
-];
-
 function distanceInMiles(lat1: number, lon1: number, lat2: number, lon2: number) {
   const radius = 3958.8;
   const toRad = (value: number) => (value * Math.PI) / 180;
@@ -100,7 +117,7 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState("suwanee");
   const [locations, setLocations] = useState<RestaurantLocation[]>(DEFAULT_LOCATIONS);
   const [siteSettings, setSiteSettings] = useState(DEFAULT_SITE_SETTINGS);
-  const [homePage, setHomePage] = useState<HomePageContent>({});
+  const [homePage, setHomePage] = useState<HomePageContent>(DEFAULT_HOME);
   const [foodCategories, setFoodCategories] = useState(MENU_CATEGORIES);
   const [drinkCategories, setDrinkCategories] = useState(DRINK_CATEGORIES);
   const [locationChosen, setLocationChosen] = useState(false);
@@ -109,6 +126,11 @@ export default function Home() {
   const selectedLocation = locations.find((location) => location.id === selectedId) ?? locations[0];
   const availableFoodCategories = foodCategories.filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId));
   const availableDrinkCategories = drinkCategories.filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId));
+  const menuCards = [
+    { title:homePage.menuCard1Title,eyebrow:homePage.menuCard1Eyebrow,image:homePage.menuCard1ImageUrl },
+    { title:homePage.menuCard2Title,eyebrow:homePage.menuCard2Eyebrow,image:homePage.menuCard2ImageUrl },
+    { title:homePage.menuCard3Title,eyebrow:homePage.menuCard3Eyebrow,image:homePage.menuCard3ImageUrl },
+  ];
 
   useEffect(() => {
     const requestedLocation = new URLSearchParams(window.location.search).get("location");
@@ -177,10 +199,21 @@ export default function Home() {
         if (Array.isArray(payload.pages)) {
           const cmsHome = payload.pages.find((page: Record<string, unknown>) => page.slug === "home");
           if (cmsHome) {
+            const text = (key: keyof HomePageContent): string => cmsHome[key] ? String(cmsHome[key]) : String(DEFAULT_HOME[key] ?? "");
+            const media = (key: string, fallback?: string) => cmsHome[key] && typeof cmsHome[key] === "object" && "url" in (cmsHome[key] as object)
+              ? String((cmsHome[key] as { url: unknown }).url) : fallback;
             setHomePage({
-              heroImageUrl: cmsHome.heroImage && typeof cmsHome.heroImage === "object" && "url" in cmsHome.heroImage
-                ? String((cmsHome.heroImage as { url: unknown }).url)
-                : undefined,
+              heroImageUrl:media("heroImage"),gatewayEyebrow:text("gatewayEyebrow"),gatewayTitle:text("gatewayTitle"),gatewayAccent:text("gatewayAccent"),gatewayDescription:text("gatewayDescription"),
+              storyEyebrow:text("storyEyebrow"),storyTitle:text("storyTitle"),storyAccent:text("storyAccent"),storyBody:text("storyBody"),storyImageUrl:media("storyImage",DEFAULT_HOME.storyImageUrl),
+              menuIntroEyebrow:text("menuIntroEyebrow"),menuIntroTitle:text("menuIntroTitle"),menuIntroAccent:text("menuIntroAccent"),
+              menuCard1Eyebrow:text("menuCard1Eyebrow"),menuCard1Title:text("menuCard1Title"),menuCard1ImageUrl:media("menuCard1Image",DEFAULT_HOME.menuCard1ImageUrl),
+              menuCard2Eyebrow:text("menuCard2Eyebrow"),menuCard2Title:text("menuCard2Title"),menuCard2ImageUrl:media("menuCard2Image",DEFAULT_HOME.menuCard2ImageUrl),
+              menuCard3Eyebrow:text("menuCard3Eyebrow"),menuCard3Title:text("menuCard3Title"),menuCard3ImageUrl:media("menuCard3Image",DEFAULT_HOME.menuCard3ImageUrl),
+              foodMenuTitle:text("foodMenuTitle"),foodMenuDescription:text("foodMenuDescription"),foodMenuDisclaimer:text("foodMenuDisclaimer"),
+              drinkEyebrow:text("drinkEyebrow"),drinkTitle:text("drinkTitle"),drinkAccent:text("drinkAccent"),drinkDescription:text("drinkDescription"),drinkDisclaimer:text("drinkDisclaimer"),
+              featureEyebrow:text("featureEyebrow"),featureTitle:text("featureTitle"),featureAccent:text("featureAccent"),featureBody:text("featureBody"),featureImageUrl:media("featureImage",DEFAULT_HOME.featureImageUrl),
+              privateDiningEyebrow:text("privateDiningEyebrow"),privateDiningTitle:text("privateDiningTitle"),privateDiningAccent:text("privateDiningAccent"),privateDiningBody:text("privateDiningBody"),privateDiningImageUrl:media("privateDiningImage",DEFAULT_HOME.privateDiningImageUrl),privateDiningCaption:text("privateDiningCaption"),
+              connectEyebrow:text("connectEyebrow"),connectTitle:text("connectTitle"),connectAccent:text("connectAccent"),footerTagline:text("footerTagline"),footerCopyright:text("footerCopyright"),
             });
           }
         }
@@ -251,9 +284,9 @@ export default function Home() {
         <section className="location-gateway" aria-labelledby="location-gateway-title">
           <div className="gateway-brand"><span className="brand-mark">KM</span><span>KITCHEN MASTER</span></div>
           <div className="gateway-copy">
-            <p className="kicker">WELCOME TO KITCHEN MASTER</p>
-            <h1 id="location-gateway-title">Choose your<br /><em>location.</em></h1>
-            <p>Menus, reservations, hours, and restaurant details are tailored to your selected Kitchen Master.</p>
+            <p className="kicker">{homePage.gatewayEyebrow}</p>
+            <h1 id="location-gateway-title">{homePage.gatewayTitle}<br /><em>{homePage.gatewayAccent}</em></h1>
+            <p>{homePage.gatewayDescription}</p>
           </div>
           <div className="gateway-locations">
             {locations.map((location) => (
@@ -337,19 +370,19 @@ export default function Home() {
       </section>
 
       <section className="story" id="story">
-        <div className="story-label"><span>01</span><p>OUR PHILOSOPHY</p></div>
+        <div className="story-label"><span>01</span><p>{homePage.storyEyebrow}</p></div>
         <div className="story-copy">
           <p className="brush">匠</p>
-          <h2>Old-world technique.<br /><em>New-world spirit.</em></h2>
-          <p>At Kitchen Master, Taiwanese and Japanese traditions meet a modern American point of view. Every fold, slice, and sizzle reflects our dedication to craft, flavor, and ingredients prepared fresh each day.</p>
+          <h2>{homePage.storyTitle}<br /><em>{homePage.storyAccent}</em></h2>
+          <p>{homePage.storyBody}</p>
           <a className="under-link" href="#menu">OUR STORY <span>→</span></a>
         </div>
-        <div className="story-image"><img src="/images/dining.png" alt="Kitchen Master dining room" /><span className="vertical-copy">CRAFTED WITH INTENTION</span></div>
+        <div className="story-image"><img src={homePage.storyImageUrl} alt="Kitchen Master dining room" /><span className="vertical-copy">CRAFTED WITH INTENTION</span></div>
       </section>
 
       <section className="menu-section" id="menu">
         <div className="section-head">
-          <div><p className="kicker dark">WHAT WE’RE KNOWN FOR</p><h2>Made with patience.<br /><em>Remembered by flavor.</em></h2></div>
+          <div><p className="kicker dark">{homePage.menuIntroEyebrow}</p><h2>{homePage.menuIntroTitle}<br /><em>{homePage.menuIntroAccent}</em></h2></div>
           <a className="under-link" href="#full-menu">VIEW FULL MENU <span>↓</span></a>
         </div>
         <div className="menu-grid">
@@ -363,7 +396,7 @@ export default function Home() {
       </section>
 
       <section className="full-menu" id="full-menu">
-        <div className="full-menu-head"><div><p className="kicker">SUWANEE DINNER MENU</p><h2>The full menu.</h2></div><p>Handcrafted daily. Menu availability and pricing may change. Please tell your server about any allergies before ordering.</p></div>
+        <div className="full-menu-head"><div><p className="kicker">{selectedLocation.name.toUpperCase()} DINNER MENU</p><h2>{homePage.foodMenuTitle}</h2></div><p>{homePage.foodMenuDescription}</p></div>
         <div className="menu-tabs" role="tablist" aria-label="Menu categories">
           {availableFoodCategories.map((category) => <button role="tab" aria-selected={activeMenuCategory === category.name} className={activeMenuCategory === category.name ? "active" : ""} onClick={() => setActiveMenuCategory(category.name)} key={category.name}>{category.name}</button>)}
         </div>
@@ -379,11 +412,11 @@ export default function Home() {
             </div>
           </div>
         ))}
-        <div className="menu-disclaimer"><span>V · Vegetarian</span><span>Raw · May be served raw or undercooked</span><span>Parties of six or more are subject to 20% gratuity</span></div>
+        <div className="menu-disclaimer">{homePage.foodMenuDisclaimer.split("|").map((item)=><span key={item}>{item}</span>)}</div>
       </section>
 
       <section className="full-menu drinks-menu" id="drinks">
-        <div className="full-menu-head"><div><p className="kicker">FROM THE BAR</p><h2>Pour something<br /><em>memorable.</em></h2></div><p>House cocktails inspired by Asian flavors, a considered wine and sake list, and thoughtful zero-proof drinks.</p></div>
+        <div className="full-menu-head"><div><p className="kicker">{homePage.drinkEyebrow}</p><h2>{homePage.drinkTitle}<br /><em>{homePage.drinkAccent}</em></h2></div><p>{homePage.drinkDescription}</p></div>
         <div className="menu-tabs" role="tablist" aria-label="Drink categories">
           {availableDrinkCategories.map((category) => <button role="tab" aria-selected={activeDrinkCategory === category.name} className={activeDrinkCategory === category.name ? "active" : ""} onClick={() => setActiveDrinkCategory(category.name)} key={category.name}>{category.name}</button>)}
         </div>
@@ -395,21 +428,21 @@ export default function Home() {
             </div>
           </div>
         ))}
-        <div className="menu-disclaimer"><span>Must be 21+ with valid identification</span><span>Selections and vintages may change</span><span>Please enjoy responsibly</span></div>
+        <div className="menu-disclaimer">{homePage.drinkDisclaimer.split("|").map((item)=><span key={item}>{item}</span>)}</div>
       </section>
 
       <section className="feature">
-        <div className="feature-image"><img src="/images/spread.jpg" alt="A spread of Kitchen Master dishes" /></div>
-        <div className="feature-copy"><p className="kicker">DINNER, DONE DIFFERENTLY</p><h2>A table worth<br /><em>gathering around.</em></h2><p>From a quick dinner to a long celebration, every meal is made to be shared.</p><div><a className="button button-light" href={RESY_URL} target="_blank" rel="noreferrer">Book on Resy <span>↗</span></a><a className="text-link" href="https://order.toasttab.com/online/kitchen-master-bistro-2-3131-lawrenceville-suwanee-rd-b5" target="_blank" rel="noreferrer">Order pickup <span>→</span></a></div></div>
+        <div className="feature-image"><img src={homePage.featureImageUrl} alt="A spread of Kitchen Master dishes" /></div>
+        <div className="feature-copy"><p className="kicker">{homePage.featureEyebrow}</p><h2>{homePage.featureTitle}<br /><em>{homePage.featureAccent}</em></h2><p>{homePage.featureBody}</p><div>{selectedLocation.reservationUrl&&<a className="button button-light" href={selectedLocation.reservationUrl} target="_blank" rel="noreferrer">Book on Resy <span>↗</span></a>}<a className="text-link" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order pickup <span>→</span></a></div></div>
       </section>
 
       <section className="events" id="events">
-        <div className="events-copy"><p className="kicker dark">PRIVATE DINING</p><h2>Your occasion.<br /><em>Our craft.</em></h2><p>Host an intimate dinner or a full celebration in a space designed for memorable meals. Our team will help shape the room and menu around your event.</p><a className="button button-dark" href="https://www.kitchenmasterga.com/private-rooms" target="_blank" rel="noreferrer">Plan your event <span>↗</span></a></div>
-        <div className="events-image"><img src="/images/private-room.png" alt="Private dining room at Kitchen Master" /><span>PRIVATE ROOMS · CUSTOM MENUS · PERSONAL SERVICE</span></div>
+        <div className="events-copy"><p className="kicker dark">{homePage.privateDiningEyebrow}</p><h2>{homePage.privateDiningTitle}<br /><em>{homePage.privateDiningAccent}</em></h2><p>{homePage.privateDiningBody}</p><a className="button button-dark" href="/pages/private-dining">Plan your event <span>↗</span></a></div>
+        <div className="events-image"><img src={homePage.privateDiningImageUrl} alt="Private dining room at Kitchen Master" /><span>{homePage.privateDiningCaption}</span></div>
       </section>
 
       <section className="connect" id="contact">
-        <div className="connect-intro"><p className="kicker dark">MORE FROM KITCHEN MASTER</p><h2>Come be part<br />of the story.</h2></div>
+        <div className="connect-intro"><p className="kicker dark">{homePage.connectEyebrow}</p><h2>{homePage.connectTitle}<br />{homePage.connectAccent}</h2></div>
         <div className="connect-links">
           <a href={`mailto:${siteSettings.contactEmail}`}><span>01</span><div><small>Questions & feedback</small><strong>Contact us</strong></div><b>↗</b></a>
           <a href="/pages/careers"><span>02</span><div><small>Join our team</small><strong>Careers</strong></div><b>↗</b></a>
@@ -419,8 +452,8 @@ export default function Home() {
       </section>
 
       <footer>
-        <div className="footer-top"><div className="footer-brand"><span className="brand-mark">KM</span><h2>KITCHEN<br />MASTER</h2><p>Tradition meets innovation.</p></div><div className="footer-locations"><small>GEORGIA</small><button onClick={() => showLocation("suwanee")}>Suwanee <span>→</span></button><button onClick={() => showLocation("midtown")}>Midtown Atlanta <em>Coming soon</em></button></div><div className="footer-locations"><small>TEXAS</small><button onClick={() => showLocation("frisco")}>Frisco <span>→</span></button><button onClick={() => showLocation("southlake")}>Southlake <span>→</span></button></div><div><small>FOLLOW</small><a href={siteSettings.instagramUrl} target="_blank" rel="noreferrer">Instagram ↗</a><a href={siteSettings.facebookUrl} target="_blank" rel="noreferrer">Facebook ↗</a></div></div>
-        <div className="footer-bottom"><span>© 2026 Kitchen Master</span><span>{siteSettings.contactEmail}</span><span>Suwanee, Georgia</span></div>
+        <div className="footer-top"><div className="footer-brand"><span className="brand-mark">KM</span><h2>KITCHEN<br />MASTER</h2><p>{homePage.footerTagline}</p></div><div className="footer-locations"><small>GEORGIA</small><button onClick={() => showLocation("suwanee")}>Suwanee <span>→</span></button><button onClick={() => showLocation("midtown")}>Midtown Atlanta <em>Coming soon</em></button></div><div className="footer-locations"><small>TEXAS</small><button onClick={() => showLocation("frisco")}>Frisco <span>→</span></button><button onClick={() => showLocation("southlake")}>Southlake <span>→</span></button></div><div><small>FOLLOW</small><a href={siteSettings.instagramUrl} target="_blank" rel="noreferrer">Instagram ↗</a><a href={siteSettings.facebookUrl} target="_blank" rel="noreferrer">Facebook ↗</a></div></div>
+        <div className="footer-bottom"><span>{homePage.footerCopyright}</span><span>{siteSettings.contactEmail}</span><span>{selectedLocation.city}</span></div>
       </footer>
     </main>
   );

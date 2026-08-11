@@ -1,5 +1,7 @@
 import type { Core } from '@strapi/strapi';
 import { DRINK_CATEGORIES, MENU_CATEGORIES } from './seed/menuData';
+import { statSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const locations = [
   {
@@ -56,6 +58,16 @@ export default {
    * run jobs, or perform some special logic.
    */
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
+    async function cmsImage(fileName: string) {
+      const existing = await strapi.db.query('plugin::upload.file').findOne({ where: { name: fileName } });
+      if (existing) return existing.id;
+      const path = resolve(process.cwd(), '..', 'public', 'images', fileName);
+      const type = fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') ? 'image/jpeg' : 'image/png';
+      const uploaded = await strapi.plugin('upload').service('upload').upload({
+        data: {}, files: { filepath: path, originalFilename: fileName, mimetype: type, size: statSync(path).size },
+      });
+      return uploaded[0]?.id;
+    }
     const existingLocations = await strapi.documents('api::location.location').findMany({ limit: 1 });
 
     if (existingLocations.length === 0) {
@@ -116,6 +128,41 @@ export default {
           status: 'published',
         });
       }
+    }
+
+    const homePage = await strapi.documents('api::site-page.site-page').findFirst({ filters: { slug: 'home' } });
+    if (homePage && !homePage.storyTitle) {
+      const [heroImage, storyImage, card1, card2, card3, featureImage, privateDiningImage] = await Promise.all([
+        cmsImage('hero.png'), cmsImage('dining.png'), cmsImage('soup-dumplings.png'), cmsImage('lamb-chop.png'),
+        cmsImage('szechuan-wonton.png'), cmsImage('spread.jpg'), cmsImage('private-room.png'),
+      ]);
+      await strapi.documents('api::site-page.site-page').update({
+        documentId: homePage.documentId,
+        data: {
+          heroImage,
+          gatewayEyebrow: 'Welcome to Kitchen Master', gatewayTitle: 'Choose your', gatewayAccent: 'location.',
+          gatewayDescription: 'Menus, reservations, hours, and restaurant details are tailored to your selected Kitchen Master.',
+          storyEyebrow: 'Our philosophy', storyTitle: 'Old-world technique.', storyAccent: 'New-world spirit.',
+          storyBody: 'At Kitchen Master, Taiwanese and Japanese traditions meet a modern American point of view. Every fold, slice, and sizzle reflects our dedication to craft, flavor, and ingredients prepared fresh each day.', storyImage,
+          menuIntroEyebrow: 'What we’re known for', menuIntroTitle: 'Made with patience.', menuIntroAccent: 'Remembered by flavor.',
+          menuCard1Eyebrow: 'The signature', menuCard1Title: 'Soup Dumplings', menuCard1Image: card1,
+          menuCard2Eyebrow: 'From the wok', menuCard2Title: 'Modern Plates', menuCard2Image: card2,
+          menuCard3Eyebrow: 'Made to share', menuCard3Title: 'Small Plates', menuCard3Image: card3,
+          foodMenuTitle: 'The full menu.', foodMenuDescription: 'Handcrafted daily. Menu availability and pricing may change. Please tell your server about any allergies before ordering.',
+          foodMenuDisclaimer: 'V · Vegetarian|Raw · May be served raw or undercooked|Parties of six or more are subject to 20% gratuity',
+          drinkEyebrow: 'From the bar', drinkTitle: 'Pour something', drinkAccent: 'memorable.',
+          drinkDescription: 'House cocktails inspired by Asian flavors, a considered wine and sake list, and thoughtful zero-proof drinks.',
+          drinkDisclaimer: 'Must be 21+ with valid identification|Selections and vintages may change|Please enjoy responsibly',
+          featureEyebrow: 'Dinner, done differently', featureTitle: 'A table worth', featureAccent: 'gathering around.',
+          featureBody: 'From a quick dinner to a long celebration, every meal is made to be shared.', featureImage,
+          privateDiningEyebrow: 'Private dining', privateDiningTitle: 'Your occasion.', privateDiningAccent: 'Our craft.',
+          privateDiningBody: 'Host an intimate dinner or a full celebration in a space designed for memorable meals. Our team will help shape the room and menu around your event.',
+          privateDiningImage, privateDiningCaption: 'Private rooms · Custom menus · Personal service',
+          connectEyebrow: 'More from Kitchen Master', connectTitle: 'Come be part', connectAccent: 'of the story.',
+          footerTagline: 'Tradition meets innovation.', footerCopyright: '© 2026 Kitchen Master',
+        },
+        status: 'published',
+      });
     }
 
     const existingCategories = await strapi.documents('api::menu-category.menu-category').findMany({ limit: 1 });

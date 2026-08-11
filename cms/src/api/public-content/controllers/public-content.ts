@@ -23,7 +23,7 @@ export default {
         status,
         sort: ['sortOrder:asc'],
         limit: 100,
-        populate: ['location', 'heroImage', 'socialImage'],
+        populate: ['location', 'heroImage', 'socialImage', 'storyImage', 'menuCard1Image', 'menuCard2Image', 'menuCard3Image', 'featureImage', 'privateDiningImage'],
       }),
     ]);
 
