@@ -133,7 +133,13 @@ export default function Home() {
   ];
 
   useEffect(() => {
-    const requestedLocation = new URLSearchParams(window.location.search).get("location");
+    const search = new URLSearchParams(window.location.search);
+    const requestedLocation = search.get("location");
+    if (search.get("choose-location") === "1") {
+      window.localStorage.removeItem("kitchen-master-location");
+      setLocationChosen(false);
+      return;
+    }
     const savedLocation = window.localStorage.getItem("kitchen-master-location");
     if (requestedLocation || savedLocation) {
       setSelectedId(requestedLocation || savedLocation || "suwanee");
@@ -347,6 +353,11 @@ export default function Home() {
               {locations.map((location) => <option value={location.id} key={location.id}>{location.name}{location.status === "coming-soon" ? " — Soon" : ""}</option>)}
             </select>
           </label>
+          <button className="change-location" onClick={() => {
+            window.localStorage.removeItem("kitchen-master-location");
+            setLocationChosen(false);
+            setMenuOpen(false);
+          }}>Change location</button>
           {selectedLocation.status === "open" ? <a className="header-cta" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order online</a> : <a className="header-cta" href="#locations">Coming soon</a>}
         </div>
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Toggle menu">{menuOpen ? "×" : "☰"}</button>
