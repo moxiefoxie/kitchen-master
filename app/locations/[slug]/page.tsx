@@ -17,7 +17,7 @@ export async function generateMetadata({params}:{params:Promise<{slug:string}>})
   const {slug}=await params;const location=await getLocation(slug);if(!location)return {};
   const title=location.seoTitle||`Kitchen Master ${location.name}`;
   const description=location.seoDescription||`Menus, hours, reservations, and directions for Kitchen Master in ${location.city}.`;
-  return {title,description,alternates:{canonical:`${siteUrl}/locations/${slug}`},openGraph:{title,description,type:"website",url:`${siteUrl}/locations/${slug}`}};
+  return {title:{absolute:title},description,alternates:{canonical:`${siteUrl}/locations/${slug}`},openGraph:{title,description,type:"website",url:`${siteUrl}/locations/${slug}`}};
 }
 
 export default async function LocationPage({params}:{params:Promise<{slug:string}>}){
