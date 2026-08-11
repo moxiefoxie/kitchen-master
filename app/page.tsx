@@ -205,6 +205,13 @@ export default function Home() {
         if (Array.isArray(payload.pages)) {
           const cmsHome = payload.pages.find((page: Record<string, unknown>) => page.slug === "home");
           if (cmsHome) {
+            setSiteSettings((current) => ({
+              ...current,
+              heroEyebrow: cmsHome.heroEyebrow ? String(cmsHome.heroEyebrow) : current.heroEyebrow,
+              heroTitle: cmsHome.heroTitle ? String(cmsHome.heroTitle) : current.heroTitle,
+              heroAccent: cmsHome.heroAccent ? String(cmsHome.heroAccent) : current.heroAccent,
+              heroDescription: cmsHome.heroDescription ? String(cmsHome.heroDescription) : current.heroDescription,
+            }));
             const text = (key: keyof HomePageContent): string => cmsHome[key] ? String(cmsHome[key]) : String(DEFAULT_HOME[key] ?? "");
             const media = (key: string, fallback?: string) => cmsHome[key] && typeof cmsHome[key] === "object" && "url" in (cmsHome[key] as object)
               ? String((cmsHome[key] as { url: unknown }).url) : fallback;
@@ -233,7 +240,7 @@ export default function Home() {
           const cardImages=Array.isArray(featured?.images)?featured.images as {url?:unknown}[]:[];
           setHomePage((current)=>({
             ...current,
-            heroImageUrl:image(gateway,current.heroImageUrl),gatewayEyebrow:value(gateway,"eyebrow",current.gatewayEyebrow),gatewayTitle:value(gateway,"title",current.gatewayTitle),gatewayAccent:value(gateway,"accent",current.gatewayAccent),gatewayDescription:value(gateway,"body",current.gatewayDescription),
+            gatewayEyebrow:value(gateway,"eyebrow",current.gatewayEyebrow),gatewayTitle:value(gateway,"title",current.gatewayTitle),gatewayAccent:value(gateway,"accent",current.gatewayAccent),gatewayDescription:value(gateway,"body",current.gatewayDescription),
             storyEyebrow:value(story,"eyebrow",current.storyEyebrow),storyTitle:value(story,"title",current.storyTitle),storyAccent:value(story,"accent",current.storyAccent),storyBody:value(story,"body",current.storyBody),storyImageUrl:image(story,current.storyImageUrl),
             menuIntroEyebrow:value(featured,"eyebrow",current.menuIntroEyebrow),menuIntroTitle:value(featured,"title",current.menuIntroTitle),menuIntroAccent:value(featured,"accent",current.menuIntroAccent),
             menuCard1Eyebrow:value(cards[0],"eyebrow",current.menuCard1Eyebrow),menuCard1Title:value(cards[0],"title",current.menuCard1Title),menuCard1ImageUrl:cardImages[0]?.url?String(cardImages[0].url):current.menuCard1ImageUrl,
@@ -363,12 +370,12 @@ export default function Home() {
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Toggle menu">{menuOpen ? "×" : "☰"}</button>
       </header>
 
-      <section className="hero" id="top" style={(selectedLocation.heroImageUrl || homePage.heroImageUrl) ? { backgroundImage: `url(${selectedLocation.heroImageUrl || homePage.heroImageUrl})` } : undefined}>
+      <section className="hero" id="top" style={(homePage.heroImageUrl || selectedLocation.heroImageUrl) ? { backgroundImage: `url(${homePage.heroImageUrl || selectedLocation.heroImageUrl})` } : undefined}>
         <div className="hero-shade" />
         <div className="hero-copy">
-          <p className="kicker">{selectedLocation.heroEyebrow || siteSettings.heroEyebrow}</p>
-          <h1>{selectedLocation.heroTitle || siteSettings.heroTitle}<br /><em>{selectedLocation.heroAccent || siteSettings.heroAccent}</em></h1>
-          <p className="hero-sub">{(selectedLocation.heroDescription || siteSettings.heroDescription).replace("{{location}}", selectedLocation.name)}</p>
+          <p className="kicker">{siteSettings.heroEyebrow}</p>
+          <h1>{siteSettings.heroTitle}<br /><em>{siteSettings.heroAccent}</em></h1>
+          <p className="hero-sub">{siteSettings.heroDescription.replace("{{location}}", selectedLocation.name)}</p>
           <div className="hero-actions">
             <a className="button button-red" href="#menu">Explore the menu <span>↗</span></a>
             {selectedLocation.reservationUrl || selectedLocation.id === "suwanee" ? <a className="text-link" href={selectedLocation.reservationUrl || RESY_URL} target="_blank" rel="noreferrer">Book on Resy <span>→</span></a> : selectedLocation.status === "open" ? <a className="text-link" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order in {selectedLocation.name} <span>→</span></a> : <a className="text-link" href="#locations">Opening soon <span>↓</span></a>}
