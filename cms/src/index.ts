@@ -1,4 +1,5 @@
 import type { Core } from '@strapi/strapi';
+import { DRINK_CATEGORIES, MENU_CATEGORIES } from './seed/menuData';
 
 const locations = [
   {
@@ -72,6 +73,41 @@ export default {
         },
         status: 'published',
       });
+    }
+
+    const existingCategories = await strapi.documents('api::menu-category.menu-category').findMany({ limit: 1 });
+    if (existingCategories.length === 0) {
+      const menus = [
+        ...MENU_CATEGORIES.map((category) => ({ ...category, menuType: 'food' as const })),
+        ...DRINK_CATEGORIES.map((category) => ({ ...category, menuType: 'drink' as const })),
+      ];
+
+      for (const [categoryIndex, menu] of menus.entries()) {
+        const category = await strapi.documents('api::menu-category.menu-category').create({
+          data: {
+            name: menu.name,
+            slug: `${menu.menuType}-${menu.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`,
+            menuType: menu.menuType,
+            note: menu.note,
+            sortOrder: categoryIndex + 1,
+          },
+          status: 'published',
+        });
+
+        for (const [itemIndex, item] of menu.items.entries()) {
+          await strapi.documents('api::menu-item.menu-item').create({
+            data: {
+              name: item.name,
+              price: item.price,
+              description: item.description,
+              tags: item.tags ?? [],
+              sortOrder: itemIndex + 1,
+              category: category.documentId,
+            },
+            status: 'published',
+          });
+        }
+      }
     }
   },
 };

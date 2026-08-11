@@ -67,6 +67,8 @@ export default function Home() {
   const [miles, setMiles] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState("suwanee");
   const [locations, setLocations] = useState<RestaurantLocation[]>(DEFAULT_LOCATIONS);
+  const [foodCategories, setFoodCategories] = useState(MENU_CATEGORIES);
+  const [drinkCategories, setDrinkCategories] = useState(DRINK_CATEGORIES);
   const [activeMenuCategory, setActiveMenuCategory] = useState(MENU_CATEGORIES[0].name);
   const [activeDrinkCategory, setActiveDrinkCategory] = useState(DRINK_CATEGORIES[0].name);
   const selectedLocation = locations.find((location) => location.id === selectedId) ?? locations[0];
@@ -75,8 +77,8 @@ export default function Home() {
     fetch("/api/cms")
       .then((response) => response.json())
       .then((payload) => {
-        if (!Array.isArray(payload.locations) || payload.locations.length === 0) return;
-        const cmsLocations: RestaurantLocation[] = payload.locations.map((location: Record<string, unknown>) => ({
+        if (Array.isArray(payload.locations) && payload.locations.length > 0) {
+          const cmsLocations: RestaurantLocation[] = payload.locations.map((location: Record<string, unknown>) => ({
           id: String(location.slug),
           name: String(location.name),
           state: String(location.state),
@@ -89,9 +91,35 @@ export default function Home() {
           hours: String(location.hours ?? ""),
           orderUrl: String(location.orderUrl ?? ""),
           reservationUrl: String(location.reservationUrl ?? ""),
-        }));
-        setLocations(cmsLocations);
-        setSelectedId((current) => cmsLocations.some((location) => location.id === current) ? current : cmsLocations[0].id);
+          }));
+          setLocations(cmsLocations);
+          setSelectedId((current) => cmsLocations.some((location) => location.id === current) ? current : cmsLocations[0].id);
+        }
+
+        if (Array.isArray(payload.menuCategories) && payload.menuCategories.length > 0) {
+          const normalizeCategories = (menuType: "food" | "drink") => payload.menuCategories
+            .filter((category: Record<string, unknown>) => category.menuType === menuType)
+            .map((category: Record<string, unknown>) => ({
+              name: String(category.name),
+              note: category.note ? String(category.note) : undefined,
+              items: Array.isArray(category.items) ? category.items.map((item: Record<string, unknown>) => ({
+                name: String(item.name),
+                price: String(item.price),
+                description: item.description ? String(item.description) : undefined,
+                tags: Array.isArray(item.tags) ? item.tags.map(String) : undefined,
+              })) : [],
+            }));
+          const cmsFood = normalizeCategories("food");
+          const cmsDrinks = normalizeCategories("drink");
+          if (cmsFood.length > 0) {
+            setFoodCategories(cmsFood);
+            setActiveMenuCategory((current) => cmsFood.some((category: { name: string }) => category.name === current) ? current : cmsFood[0].name);
+          }
+          if (cmsDrinks.length > 0) {
+            setDrinkCategories(cmsDrinks);
+            setActiveDrinkCategory((current) => cmsDrinks.some((category: { name: string }) => category.name === current) ? current : cmsDrinks[0].name);
+          }
+        }
       })
       .catch(() => undefined);
   }, []);
@@ -218,9 +246,9 @@ export default function Home() {
       <section className="full-menu" id="full-menu">
         <div className="full-menu-head"><div><p className="kicker">SUWANEE DINNER MENU</p><h2>The full menu.</h2></div><p>Handcrafted daily. Menu availability and pricing may change. Please tell your server about any allergies before ordering.</p></div>
         <div className="menu-tabs" role="tablist" aria-label="Menu categories">
-          {MENU_CATEGORIES.map((category) => <button role="tab" aria-selected={activeMenuCategory === category.name} className={activeMenuCategory === category.name ? "active" : ""} onClick={() => setActiveMenuCategory(category.name)} key={category.name}>{category.name}</button>)}
+          {foodCategories.map((category) => <button role="tab" aria-selected={activeMenuCategory === category.name} className={activeMenuCategory === category.name ? "active" : ""} onClick={() => setActiveMenuCategory(category.name)} key={category.name}>{category.name}</button>)}
         </div>
-        {MENU_CATEGORIES.filter((category) => category.name === activeMenuCategory).map((category) => (
+        {foodCategories.filter((category) => category.name === activeMenuCategory).map((category) => (
           <div className="menu-panel" role="tabpanel" key={category.name}>
             <div className="menu-panel-title"><span>菜單</span><div><h3>{category.name}</h3>{category.note && <p>{category.note}</p>}</div></div>
             <div className="menu-items">
@@ -238,9 +266,9 @@ export default function Home() {
       <section className="full-menu drinks-menu" id="drinks">
         <div className="full-menu-head"><div><p className="kicker">FROM THE BAR</p><h2>Pour something<br /><em>memorable.</em></h2></div><p>House cocktails inspired by Asian flavors, a considered wine and sake list, and thoughtful zero-proof drinks.</p></div>
         <div className="menu-tabs" role="tablist" aria-label="Drink categories">
-          {DRINK_CATEGORIES.map((category) => <button role="tab" aria-selected={activeDrinkCategory === category.name} className={activeDrinkCategory === category.name ? "active" : ""} onClick={() => setActiveDrinkCategory(category.name)} key={category.name}>{category.name}</button>)}
+          {drinkCategories.map((category) => <button role="tab" aria-selected={activeDrinkCategory === category.name} className={activeDrinkCategory === category.name ? "active" : ""} onClick={() => setActiveDrinkCategory(category.name)} key={category.name}>{category.name}</button>)}
         </div>
-        {DRINK_CATEGORIES.filter((category) => category.name === activeDrinkCategory).map((category) => (
+        {drinkCategories.filter((category) => category.name === activeDrinkCategory).map((category) => (
           <div className="menu-panel" role="tabpanel" key={category.name}>
             <div className="menu-panel-title"><span>乾杯</span><div><h3>{category.name}</h3>{category.note && <p>{category.note}</p>}</div></div>
             <div className="menu-items">

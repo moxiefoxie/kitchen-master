@@ -26,6 +26,7 @@ export async function GET() {
       configured: true,
       locations: content?.locations ?? [],
       settings: content?.settings ?? null,
+      menuCategories: content?.menuCategories ?? [],
     });
   } catch (error) {
     console.error("CMS request failed", error);
