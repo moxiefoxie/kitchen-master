@@ -5,6 +5,26 @@ import { DRINK_CATEGORIES, MENU_CATEGORIES } from "./menuData";
 
 const RESY_URL = "https://resy.com/cities/suwanee-ga/venues/kitchen-master";
 
+type SiteSettings = {
+  heroEyebrow: string;
+  heroTitle: string;
+  heroAccent: string;
+  heroDescription: string;
+  contactEmail: string;
+  instagramUrl: string;
+  facebookUrl: string;
+};
+
+const DEFAULT_SITE_SETTINGS: SiteSettings = {
+  heroEyebrow: "Taiwanese craft · Japanese precision",
+  heroTitle: "Tradition,",
+  heroAccent: "mastered.",
+  heroDescription: "Soup dumplings, fresh sushi, and bold modern plates—crafted daily in {{location}}.",
+  contactEmail: "Management@kitchenmasterga.com",
+  instagramUrl: "https://www.instagram.com/kitchenmasterga/",
+  facebookUrl: "https://www.facebook.com/kitchenmasterga/",
+};
+
 type RestaurantLocation = {
   id: string;
   name: string;
@@ -67,6 +87,7 @@ export default function Home() {
   const [miles, setMiles] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState("suwanee");
   const [locations, setLocations] = useState<RestaurantLocation[]>(DEFAULT_LOCATIONS);
+  const [siteSettings, setSiteSettings] = useState(DEFAULT_SITE_SETTINGS);
   const [foodCategories, setFoodCategories] = useState(MENU_CATEGORIES);
   const [drinkCategories, setDrinkCategories] = useState(DRINK_CATEGORIES);
   const [activeMenuCategory, setActiveMenuCategory] = useState(MENU_CATEGORIES[0].name);
@@ -94,6 +115,18 @@ export default function Home() {
           }));
           setLocations(cmsLocations);
           setSelectedId((current) => cmsLocations.some((location) => location.id === current) ? current : cmsLocations[0].id);
+        }
+
+        if (payload.settings) {
+          setSiteSettings({
+            heroEyebrow: String(payload.settings.heroEyebrow ?? DEFAULT_SITE_SETTINGS.heroEyebrow),
+            heroTitle: String(payload.settings.heroTitle ?? DEFAULT_SITE_SETTINGS.heroTitle),
+            heroAccent: String(payload.settings.heroAccent ?? DEFAULT_SITE_SETTINGS.heroAccent),
+            heroDescription: String(payload.settings.heroDescription ?? DEFAULT_SITE_SETTINGS.heroDescription),
+            contactEmail: String(payload.settings.contactEmail ?? DEFAULT_SITE_SETTINGS.contactEmail),
+            instagramUrl: String(payload.settings.instagramUrl ?? DEFAULT_SITE_SETTINGS.instagramUrl),
+            facebookUrl: String(payload.settings.facebookUrl ?? DEFAULT_SITE_SETTINGS.facebookUrl),
+          });
         }
 
         if (Array.isArray(payload.menuCategories) && payload.menuCategories.length > 0) {
@@ -180,9 +213,9 @@ export default function Home() {
       <section className="hero" id="top">
         <div className="hero-shade" />
         <div className="hero-copy">
-          <p className="kicker">Taiwanese craft · Japanese precision</p>
-          <h1>Tradition,<br /><em>mastered.</em></h1>
-          <p className="hero-sub">Soup dumplings, fresh sushi, and bold modern plates—crafted daily in {selectedLocation.name}.</p>
+          <p className="kicker">{siteSettings.heroEyebrow}</p>
+          <h1>{siteSettings.heroTitle}<br /><em>{siteSettings.heroAccent}</em></h1>
+          <p className="hero-sub">{siteSettings.heroDescription.replace("{{location}}", selectedLocation.name)}</p>
           <div className="hero-actions">
             <a className="button button-red" href="#menu">Explore the menu <span>↗</span></a>
             {selectedLocation.reservationUrl || selectedLocation.id === "suwanee" ? <a className="text-link" href={selectedLocation.reservationUrl || RESY_URL} target="_blank" rel="noreferrer">Book on Resy <span>→</span></a> : selectedLocation.status === "open" ? <a className="text-link" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order in {selectedLocation.name} <span>→</span></a> : <a className="text-link" href="#locations">Opening soon <span>↓</span></a>}
@@ -292,16 +325,16 @@ export default function Home() {
       <section className="connect" id="contact">
         <div className="connect-intro"><p className="kicker dark">MORE FROM KITCHEN MASTER</p><h2>Come be part<br />of the story.</h2></div>
         <div className="connect-links">
-          <a href="mailto:Management@kitchenmasterga.com"><span>01</span><div><small>Questions & feedback</small><strong>Contact us</strong></div><b>↗</b></a>
+          <a href={`mailto:${siteSettings.contactEmail}`}><span>01</span><div><small>Questions & feedback</small><strong>Contact us</strong></div><b>↗</b></a>
           <a href="https://www.kitchenmasterga.com/careers" target="_blank" rel="noreferrer"><span>02</span><div><small>Join our team</small><strong>Careers</strong></div><b>↗</b></a>
-          <a href="mailto:Management@kitchenmasterga.com?subject=Kitchen%20Master%20Franchise%20Opportunity"><span>03</span><div><small>Grow with us</small><strong>Franchise opportunities</strong></div><b>↗</b></a>
+          <a href={`mailto:${siteSettings.contactEmail}?subject=Kitchen%20Master%20Franchise%20Opportunity`}><span>03</span><div><small>Grow with us</small><strong>Franchise opportunities</strong></div><b>↗</b></a>
           <a href="https://www.kitchenmasterga.com/private-rooms" target="_blank" rel="noreferrer"><span>04</span><div><small>Gather together</small><strong>Private dining</strong></div><b>↗</b></a>
         </div>
       </section>
 
       <footer>
-        <div className="footer-top"><div className="footer-brand"><span className="brand-mark">KM</span><h2>KITCHEN<br />MASTER</h2><p>Tradition meets innovation.</p></div><div className="footer-locations"><small>GEORGIA</small><button onClick={() => showLocation("suwanee")}>Suwanee <span>→</span></button><button onClick={() => showLocation("midtown")}>Midtown Atlanta <em>Coming soon</em></button></div><div className="footer-locations"><small>TEXAS</small><button onClick={() => showLocation("frisco")}>Frisco <span>→</span></button><button onClick={() => showLocation("southlake")}>Southlake <span>→</span></button></div><div><small>FOLLOW</small><a href="https://www.instagram.com/kitchenmasterga/" target="_blank" rel="noreferrer">Instagram ↗</a><a href="https://www.facebook.com/kitchenmasterga/" target="_blank" rel="noreferrer">Facebook ↗</a></div></div>
-        <div className="footer-bottom"><span>© 2026 Kitchen Master</span><span>Management@kitchenmasterga.com</span><span>Suwanee, Georgia</span></div>
+        <div className="footer-top"><div className="footer-brand"><span className="brand-mark">KM</span><h2>KITCHEN<br />MASTER</h2><p>Tradition meets innovation.</p></div><div className="footer-locations"><small>GEORGIA</small><button onClick={() => showLocation("suwanee")}>Suwanee <span>→</span></button><button onClick={() => showLocation("midtown")}>Midtown Atlanta <em>Coming soon</em></button></div><div className="footer-locations"><small>TEXAS</small><button onClick={() => showLocation("frisco")}>Frisco <span>→</span></button><button onClick={() => showLocation("southlake")}>Southlake <span>→</span></button></div><div><small>FOLLOW</small><a href={siteSettings.instagramUrl} target="_blank" rel="noreferrer">Instagram ↗</a><a href={siteSettings.facebookUrl} target="_blank" rel="noreferrer">Facebook ↗</a></div></div>
+        <div className="footer-bottom"><span>© 2026 Kitchen Master</span><span>{siteSettings.contactEmail}</span><span>Suwanee, Georgia</span></div>
       </footer>
     </main>
   );
