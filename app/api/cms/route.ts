@@ -20,15 +20,12 @@ export async function GET() {
   if (!cmsUrl) return NextResponse.json({ configured: false });
 
   try {
-    const [locations, settings] = await Promise.all([
-      request("/api/locations?sort=sortOrder:asc&pagination[pageSize]=100"),
-      request("/api/site-setting"),
-    ]);
+    const content = await request("/api/kitchen-master-content");
 
     return NextResponse.json({
       configured: true,
-      locations: locations?.data ?? [],
-      settings: settings?.data ?? null,
+      locations: content?.locations ?? [],
+      settings: content?.settings ?? null,
     });
   } catch (error) {
     console.error("CMS request failed", error);
