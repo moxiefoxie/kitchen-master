@@ -1,0 +1,18 @@
+{
+  "kind": "collectionType",
+  "collectionName": "menu_items",
+  "info": {
+    "singularName": "menu-item",
+    "pluralName": "menu-items",
+    "displayName": "Menu Item"
+  },
+  "options": { "draftAndPublish": true },
+  "attributes": {
+    "name": { "type": "string", "required": true },
+    "price": { "type": "string", "required": true },
+    "description": { "type": "text" },
+    "tags": { "type": "json" },
+    "sortOrder": { "type": "integer", "default": 0 },
+    "category": { "type": "relation", "relation": "manyToOne", "target": "api::menu-category.menu-category", "inversedBy": "items" }
+  }
+}

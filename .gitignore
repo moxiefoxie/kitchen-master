@@ -2,6 +2,11 @@
 
 # dependencies
 /node_modules
+/cms/node_modules
+/cms/.cache
+/cms/.tmp
+/cms/build
+/cms/dist
 /.pnp
 .pnp.*
 .yarn/*
@@ -30,6 +35,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!/.env.example
+!/cms/.env.example
 
 # vercel
 .vercel

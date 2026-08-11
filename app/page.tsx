@@ -1,11 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DRINK_CATEGORIES, MENU_CATEGORIES } from "./menuData";
 
 const RESY_URL = "https://resy.com/cities/suwanee-ga/venues/kitchen-master";
 
-const LOCATIONS = [
+type RestaurantLocation = {
+  id: string;
+  name: string;
+  state: string;
+  address: string;
+  city: string;
+  phone: string;
+  lat: number;
+  lng: number;
+  status: "open" | "coming-soon";
+  hours: string;
+  orderUrl: string;
+  reservationUrl?: string;
+};
+
+const DEFAULT_LOCATIONS: RestaurantLocation[] = [
   {
     id: "suwanee", name: "Suwanee", state: "Georgia", address: "3131 Lawrenceville-Suwanee Rd, Ste B5",
     city: "Suwanee, GA 30024", phone: "470-589-1112", lat: 34.0236, lng: -84.0519, status: "open",
@@ -29,7 +44,7 @@ const LOCATIONS = [
     city: "Atlanta, GA", phone: "Coming soon", lat: 33.7838, lng: -84.3831, status: "coming-soon",
     hours: "Opening details coming soon", orderUrl: "",
   },
-] as const;
+];
 
 const menuCards = [
   { title: "Soup Dumplings", eyebrow: "The signature", image: "/images/soup-dumplings.png" },
@@ -51,9 +66,35 @@ export default function Home() {
   const [locationState, setLocationState] = useState<"idle" | "loading" | "found" | "denied">("idle");
   const [miles, setMiles] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState("suwanee");
+  const [locations, setLocations] = useState<RestaurantLocation[]>(DEFAULT_LOCATIONS);
   const [activeMenuCategory, setActiveMenuCategory] = useState(MENU_CATEGORIES[0].name);
   const [activeDrinkCategory, setActiveDrinkCategory] = useState(DRINK_CATEGORIES[0].name);
-  const selectedLocation = LOCATIONS.find((location) => location.id === selectedId) ?? LOCATIONS[0];
+  const selectedLocation = locations.find((location) => location.id === selectedId) ?? locations[0];
+
+  useEffect(() => {
+    fetch("/api/cms")
+      .then((response) => response.json())
+      .then((payload) => {
+        if (!Array.isArray(payload.locations) || payload.locations.length === 0) return;
+        const cmsLocations: RestaurantLocation[] = payload.locations.map((location: Record<string, unknown>) => ({
+          id: String(location.slug),
+          name: String(location.name),
+          state: String(location.state),
+          address: String(location.address),
+          city: String(location.city),
+          phone: String(location.phone ?? ""),
+          lat: Number(location.latitude),
+          lng: Number(location.longitude),
+          status: location.status === "coming-soon" ? "coming-soon" : "open",
+          hours: String(location.hours ?? ""),
+          orderUrl: String(location.orderUrl ?? ""),
+          reservationUrl: String(location.reservationUrl ?? ""),
+        }));
+        setLocations(cmsLocations);
+        setSelectedId((current) => cmsLocations.some((location) => location.id === current) ? current : cmsLocations[0].id);
+      })
+      .catch(() => undefined);
+  }, []);
 
   function showLocation(id: string) {
     setSelectedId(id);
@@ -70,7 +111,7 @@ export default function Home() {
     setLocationState("loading");
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        const nearest = LOCATIONS.filter((location) => location.status === "open")
+        const nearest = locations.filter((location) => location.status === "open")
           .map((location) => ({ location, miles: distanceInMiles(coords.latitude, coords.longitude, location.lat, location.lng) }))
           .sort((a, b) => a.miles - b.miles)[0];
         setSelectedId(nearest.location.id);
@@ -100,7 +141,7 @@ export default function Home() {
           <label className="location-select">
             <span>Location</span>
             <select value={selectedId} onChange={(event) => { setSelectedId(event.target.value); setMiles(null); setLocationState("idle"); }} aria-label="Choose restaurant location">
-              {LOCATIONS.map((location) => <option value={location.id} key={location.id}>{location.name}{location.status === "coming-soon" ? " — Soon" : ""}</option>)}
+              {locations.map((location) => <option value={location.id} key={location.id}>{location.name}{location.status === "coming-soon" ? " — Soon" : ""}</option>)}
             </select>
           </label>
           {selectedLocation.status === "open" ? <a className="header-cta" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order online</a> : <a className="header-cta" href="#locations">Coming soon</a>}
@@ -116,7 +157,7 @@ export default function Home() {
           <p className="hero-sub">Soup dumplings, fresh sushi, and bold modern plates—crafted daily in {selectedLocation.name}.</p>
           <div className="hero-actions">
             <a className="button button-red" href="#menu">Explore the menu <span>↗</span></a>
-            {selectedLocation.id === "suwanee" ? <a className="text-link" href={RESY_URL} target="_blank" rel="noreferrer">Book on Resy <span>→</span></a> : selectedLocation.status === "open" ? <a className="text-link" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order in {selectedLocation.name} <span>→</span></a> : <a className="text-link" href="#locations">Opening soon <span>↓</span></a>}
+            {selectedLocation.reservationUrl || selectedLocation.id === "suwanee" ? <a className="text-link" href={selectedLocation.reservationUrl || RESY_URL} target="_blank" rel="noreferrer">Book on Resy <span>→</span></a> : selectedLocation.status === "open" ? <a className="text-link" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order in {selectedLocation.name} <span>→</span></a> : <a className="text-link" href="#locations">Opening soon <span>↓</span></a>}
           </div>
         </div>
         <div className="hero-stamp"><span>小籠包</span><small>HANDCRAFTED<br />IN {selectedLocation.name.toUpperCase()}</small></div>
@@ -131,14 +172,14 @@ export default function Home() {
           {locationState === "denied" && <span className="distance">Location unavailable — choose a restaurant below</span>}
           <button onClick={findNearest} disabled={locationState === "loading"}>{locationState === "loading" ? "Locating…" : "Use my location"}</button>
           <a href={`https://maps.google.com/?q=${encodeURIComponent(`${selectedLocation.address}, ${selectedLocation.city}`)}`} target="_blank" rel="noreferrer">Get directions ↗</a>
-          {selectedLocation.id === "suwanee" && <a className="location-book" href={RESY_URL} target="_blank" rel="noreferrer">Book on Resy ↗</a>}
+          {(selectedLocation.reservationUrl || selectedLocation.id === "suwanee") && <a className="location-book" href={selectedLocation.reservationUrl || RESY_URL} target="_blank" rel="noreferrer">Book on Resy ↗</a>}
         </div>
       </section>
 
       <section className="location-switcher" aria-label="Choose a Kitchen Master location">
         <div className="switcher-intro"><span>OUR LOCATIONS</span><p>Choose your restaurant</p></div>
         <div className="switcher-list">
-          {LOCATIONS.map((location, index) => (
+          {locations.map((location, index) => (
             <button className={selectedId === location.id ? "active" : ""} onClick={() => { setSelectedId(location.id); setMiles(null); setLocationState("idle"); }} key={location.id}>
               <small>0{index + 1} · {location.state}</small>
               <strong>{location.name}</strong>

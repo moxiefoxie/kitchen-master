@@ -1,0 +1,21 @@
+{
+  "kind": "singleType",
+  "collectionName": "site_settings",
+  "info": {
+    "singularName": "site-setting",
+    "pluralName": "site-settings",
+    "displayName": "Site Settings",
+    "description": "Homepage copy and global links"
+  },
+  "options": { "draftAndPublish": true },
+  "attributes": {
+    "heroEyebrow": { "type": "string" },
+    "heroTitle": { "type": "string" },
+    "heroAccent": { "type": "string" },
+    "heroDescription": { "type": "text" },
+    "contactEmail": { "type": "email" },
+    "instagramUrl": { "type": "string" },
+    "facebookUrl": { "type": "string" },
+    "defaultReservationUrl": { "type": "string" }
+  }
+}
