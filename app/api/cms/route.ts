@@ -25,6 +25,9 @@ function absoluteMedia<T>(media: T): T {
       return { ...item, url: `${cmsUrl.replace(/\/$/, "")}${item.url}` } as T;
     }
   }
+  if (typeof media === "object") {
+    return Object.fromEntries(Object.entries(media as Record<string, unknown>).map(([key, value]) => [key, absoluteMedia(value)])) as T;
+  }
   return media;
 }
 
@@ -43,11 +46,7 @@ export async function GET(incomingRequest: Request) {
       heroImage: absoluteMedia(location.heroImage),
       gallery: absoluteMedia(location.gallery),
     }));
-    const pages = (content?.pages ?? []).map((page: Record<string, unknown>) => ({
-      ...page,
-      heroImage: absoluteMedia(page.heroImage),
-      socialImage: absoluteMedia(page.socialImage),
-    }));
+    const pages = (content?.pages ?? []).map((page: Record<string, unknown>) => absoluteMedia(page));
 
     return NextResponse.json({
       configured: true,
