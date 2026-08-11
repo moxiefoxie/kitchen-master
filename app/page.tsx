@@ -15,6 +15,10 @@ type SiteSettings = {
   facebookUrl: string;
 };
 
+type HomePageContent = {
+  heroImageUrl?: string;
+};
+
 const DEFAULT_SITE_SETTINGS: SiteSettings = {
   heroEyebrow: "Taiwanese craft · Japanese precision",
   heroTitle: "Tradition,",
@@ -96,6 +100,7 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState("suwanee");
   const [locations, setLocations] = useState<RestaurantLocation[]>(DEFAULT_LOCATIONS);
   const [siteSettings, setSiteSettings] = useState(DEFAULT_SITE_SETTINGS);
+  const [homePage, setHomePage] = useState<HomePageContent>({});
   const [foodCategories, setFoodCategories] = useState(MENU_CATEGORIES);
   const [drinkCategories, setDrinkCategories] = useState(DRINK_CATEGORIES);
   const [locationChosen, setLocationChosen] = useState(false);
@@ -167,6 +172,17 @@ export default function Home() {
             instagramUrl: String(payload.settings.instagramUrl ?? DEFAULT_SITE_SETTINGS.instagramUrl),
             facebookUrl: String(payload.settings.facebookUrl ?? DEFAULT_SITE_SETTINGS.facebookUrl),
           });
+        }
+
+        if (Array.isArray(payload.pages)) {
+          const cmsHome = payload.pages.find((page: Record<string, unknown>) => page.slug === "home");
+          if (cmsHome) {
+            setHomePage({
+              heroImageUrl: cmsHome.heroImage && typeof cmsHome.heroImage === "object" && "url" in cmsHome.heroImage
+                ? String((cmsHome.heroImage as { url: unknown }).url)
+                : undefined,
+            });
+          }
         }
 
         if (Array.isArray(payload.menuCategories) && payload.menuCategories.length > 0) {
@@ -280,7 +296,7 @@ export default function Home() {
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Toggle menu">{menuOpen ? "×" : "☰"}</button>
       </header>
 
-      <section className="hero" id="top" style={selectedLocation.heroImageUrl ? { backgroundImage: `url(${selectedLocation.heroImageUrl})` } : undefined}>
+      <section className="hero" id="top" style={(selectedLocation.heroImageUrl || homePage.heroImageUrl) ? { backgroundImage: `url(${selectedLocation.heroImageUrl || homePage.heroImageUrl})` } : undefined}>
         <div className="hero-shade" />
         <div className="hero-copy">
           <p className="kicker">{selectedLocation.heroEyebrow || siteSettings.heroEyebrow}</p>

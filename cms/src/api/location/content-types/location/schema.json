@@ -28,7 +28,7 @@
     "heroTitle": { "type": "string" },
     "heroAccent": { "type": "string" },
     "heroDescription": { "type": "text" },
-    "heroImage": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "heroImage": { "type": "media", "multiple": false, "allowedTypes": ["images"], "description": "Homepage background shown when this restaurant is selected. Overrides the global Home image." },
     "gallery": { "type": "media", "multiple": true, "allowedTypes": ["images"] },
     "seoTitle": { "type": "string" },
     "seoDescription": { "type": "text" },
