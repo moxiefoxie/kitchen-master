@@ -396,9 +396,9 @@ export default function Home() {
         <div className="connect-intro"><p className="kicker dark">MORE FROM KITCHEN MASTER</p><h2>Come be part<br />of the story.</h2></div>
         <div className="connect-links">
           <a href={`mailto:${siteSettings.contactEmail}`}><span>01</span><div><small>Questions & feedback</small><strong>Contact us</strong></div><b>↗</b></a>
-          <a href="https://www.kitchenmasterga.com/careers" target="_blank" rel="noreferrer"><span>02</span><div><small>Join our team</small><strong>Careers</strong></div><b>↗</b></a>
-          <a href={`mailto:${siteSettings.contactEmail}?subject=Kitchen%20Master%20Franchise%20Opportunity`}><span>03</span><div><small>Grow with us</small><strong>Franchise opportunities</strong></div><b>↗</b></a>
-          <a href="https://www.kitchenmasterga.com/private-rooms" target="_blank" rel="noreferrer"><span>04</span><div><small>Gather together</small><strong>Private dining</strong></div><b>↗</b></a>
+          <a href="/pages/careers"><span>02</span><div><small>Join our team</small><strong>Careers</strong></div><b>↗</b></a>
+          <a href="/pages/franchise"><span>03</span><div><small>Grow with us</small><strong>Franchise opportunities</strong></div><b>↗</b></a>
+          <a href="/pages/private-dining"><span>04</span><div><small>Gather together</small><strong>Private dining</strong></div><b>↗</b></a>
         </div>
       </section>
 

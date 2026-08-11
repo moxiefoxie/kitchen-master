@@ -34,6 +34,7 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Admin => 
         ];
         if (!supported.includes(uid)) return null;
         const url = new URL(env('FRONTEND_URL', 'http://localhost:3000'));
+        if (uid === 'api::site-page.site-page') url.pathname = `/pages/${documentId}`;
         url.searchParams.set('preview', '1');
         url.searchParams.set('contentType', uid);
         url.searchParams.set('documentId', documentId);
