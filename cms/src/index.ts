@@ -30,6 +30,15 @@ const locations = [
   },
 ] as const;
 
+const sitePages = [
+  { title: 'Home', slug: 'home', pageType: 'home', heroTitle: 'Tradition,', heroAccent: 'mastered.', heroDescription: 'Soup dumplings, fresh sushi, and bold modern plates—crafted daily at Kitchen Master.', sortOrder: 1 },
+  { title: 'Our Story', slug: 'our-story', pageType: 'story', heroTitle: 'Old-world technique.', heroAccent: 'New-world spirit.', heroDescription: 'Taiwanese and Japanese traditions meet a modern American point of view.', sortOrder: 2 },
+  { title: 'Private Dining', slug: 'private-dining', pageType: 'private-dining', heroTitle: 'Gather around', heroAccent: 'our table.', heroDescription: 'Plan a private dinner, celebration, or group dining experience.', sortOrder: 3 },
+  { title: 'Contact', slug: 'contact', pageType: 'contact', heroTitle: 'Come say', heroAccent: 'hello.', heroDescription: 'Questions, feedback, and general inquiries for Kitchen Master.', sortOrder: 4 },
+  { title: 'Careers', slug: 'careers', pageType: 'careers', heroTitle: 'Master your', heroAccent: 'craft.', heroDescription: 'Build your hospitality career with Kitchen Master.', sortOrder: 5 },
+  { title: 'Franchise Opportunities', slug: 'franchise', pageType: 'franchise', heroTitle: 'Grow with', heroAccent: 'Kitchen Master.', heroDescription: 'Learn about future franchise and development opportunities.', sortOrder: 6 },
+] as const;
+
 export default {
   /**
    * An asynchronous register function that runs before
@@ -58,6 +67,25 @@ export default {
       }
     }
 
+    for (const location of locations) {
+      const existing = await strapi.documents('api::location.location').findFirst({ filters: { slug: location.slug } });
+      if (existing && !existing.heroTitle) {
+        await strapi.documents('api::location.location').update({
+          documentId: existing.documentId,
+          data: {
+            contactEmail: 'Management@kitchenmasterga.com',
+            heroEyebrow: 'Taiwanese craft · Japanese precision',
+            heroTitle: 'Tradition,', heroAccent: 'mastered.',
+            heroDescription: `Soup dumplings, fresh sushi, and bold modern plates—crafted daily in ${location.name}.`,
+            seoTitle: `Kitchen Master ${location.name} | Taiwanese & Japanese Dining`,
+            seoDescription: `Explore menus, hours, reservations, and directions for Kitchen Master in ${location.city}.`,
+            seoKeywords: `Kitchen Master, ${location.name} restaurant, soup dumplings, sushi, Taiwanese food, Japanese food`,
+          },
+          status: 'published',
+        });
+      }
+    }
+
     const existingSettings = await strapi.documents('api::site-setting.site-setting').findFirst();
     if (!existingSettings) {
       await strapi.documents('api::site-setting.site-setting').create({
@@ -73,6 +101,21 @@ export default {
         },
         status: 'published',
       });
+    }
+
+    const existingPages = await strapi.documents('api::site-page.site-page').findMany({ limit: 1 });
+    if (existingPages.length === 0) {
+      for (const page of sitePages) {
+        await strapi.documents('api::site-page.site-page').create({
+          data: {
+            ...page,
+            sections: [],
+            seoTitle: `${page.title} | Kitchen Master`,
+            seoDescription: page.heroDescription,
+          },
+          status: 'published',
+        });
+      }
     }
 
     const existingCategories = await strapi.documents('api::menu-category.menu-category').findMany({ limit: 1 });

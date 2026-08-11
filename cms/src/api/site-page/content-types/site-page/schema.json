@@ -1,0 +1,31 @@
+{
+  "kind": "collectionType",
+  "collectionName": "site_pages",
+  "info": {
+    "singularName": "site-page",
+    "pluralName": "site-pages",
+    "displayName": "Site Page",
+    "description": "Editable global or location-specific website pages"
+  },
+  "options": { "draftAndPublish": true },
+  "attributes": {
+    "title": { "type": "string", "required": true },
+    "slug": { "type": "uid", "targetField": "title", "required": true },
+    "pageType": { "type": "enumeration", "enum": ["home", "story", "private-dining", "contact", "careers", "franchise", "custom"], "required": true },
+    "location": { "type": "relation", "relation": "manyToOne", "target": "api::location.location" },
+    "heroEyebrow": { "type": "string" },
+    "heroTitle": { "type": "string" },
+    "heroAccent": { "type": "string" },
+    "heroDescription": { "type": "text" },
+    "heroImage": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "sections": { "type": "json" },
+    "seoTitle": { "type": "string" },
+    "seoDescription": { "type": "text" },
+    "seoKeywords": { "type": "json" },
+    "socialImage": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "canonicalUrl": { "type": "string" },
+    "noIndex": { "type": "boolean", "default": false },
+    "structuredData": { "type": "json" },
+    "sortOrder": { "type": "integer", "default": 0 }
+  }
+}

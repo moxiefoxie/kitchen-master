@@ -15,12 +15,24 @@
     "address": { "type": "string", "required": true },
     "city": { "type": "string", "required": true },
     "phone": { "type": "string" },
+    "contactEmail": { "type": "email" },
+    "websiteUrl": { "type": "string" },
     "latitude": { "type": "decimal" },
     "longitude": { "type": "decimal" },
     "locationStatus": { "type": "enumeration", "enum": ["open", "coming-soon"], "default": "open", "required": true },
     "hours": { "type": "text" },
     "orderUrl": { "type": "string" },
     "reservationUrl": { "type": "string" },
-    "sortOrder": { "type": "integer", "default": 0 }
+    "sortOrder": { "type": "integer", "default": 0 },
+    "heroEyebrow": { "type": "string" },
+    "heroTitle": { "type": "string" },
+    "heroAccent": { "type": "string" },
+    "heroDescription": { "type": "text" },
+    "heroImage": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "gallery": { "type": "media", "multiple": true, "allowedTypes": ["images"] },
+    "seoTitle": { "type": "string" },
+    "seoDescription": { "type": "text" },
+    "seoKeywords": { "type": "json" },
+    "menuCategories": { "type": "relation", "relation": "manyToMany", "target": "api::menu-category.menu-category", "inversedBy": "locations" }
   }
 }

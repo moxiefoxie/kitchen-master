@@ -38,6 +38,14 @@ type RestaurantLocation = {
   hours: string;
   orderUrl: string;
   reservationUrl?: string;
+  contactEmail?: string;
+  heroEyebrow?: string;
+  heroTitle?: string;
+  heroAccent?: string;
+  heroDescription?: string;
+  heroImageUrl?: string;
+  seoTitle?: string;
+  seoDescription?: string;
 };
 
 const DEFAULT_LOCATIONS: RestaurantLocation[] = [
@@ -90,12 +98,34 @@ export default function Home() {
   const [siteSettings, setSiteSettings] = useState(DEFAULT_SITE_SETTINGS);
   const [foodCategories, setFoodCategories] = useState(MENU_CATEGORIES);
   const [drinkCategories, setDrinkCategories] = useState(DRINK_CATEGORIES);
+  const [locationChosen, setLocationChosen] = useState(false);
   const [activeMenuCategory, setActiveMenuCategory] = useState(MENU_CATEGORIES[0].name);
   const [activeDrinkCategory, setActiveDrinkCategory] = useState(DRINK_CATEGORIES[0].name);
   const selectedLocation = locations.find((location) => location.id === selectedId) ?? locations[0];
+  const availableFoodCategories = foodCategories.filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId));
+  const availableDrinkCategories = drinkCategories.filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId));
 
   useEffect(() => {
-    fetch("/api/cms")
+    const requestedLocation = new URLSearchParams(window.location.search).get("location");
+    const savedLocation = window.localStorage.getItem("kitchen-master-location");
+    if (requestedLocation || savedLocation) {
+      setSelectedId(requestedLocation || savedLocation || "suwanee");
+      setLocationChosen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (availableFoodCategories.length && !availableFoodCategories.some((category) => category.name === activeMenuCategory)) {
+      setActiveMenuCategory(availableFoodCategories[0].name);
+    }
+    if (availableDrinkCategories.length && !availableDrinkCategories.some((category) => category.name === activeDrinkCategory)) {
+      setActiveDrinkCategory(availableDrinkCategories[0].name);
+    }
+  }, [selectedId, foodCategories, drinkCategories]);
+
+  useEffect(() => {
+    const preview = new URLSearchParams(window.location.search).get("preview") === "1";
+    fetch(preview ? "/api/cms?preview=1" : "/api/cms")
       .then((response) => response.json())
       .then((payload) => {
         if (Array.isArray(payload.locations) && payload.locations.length > 0) {
@@ -112,6 +142,16 @@ export default function Home() {
           hours: String(location.hours ?? ""),
           orderUrl: String(location.orderUrl ?? ""),
           reservationUrl: String(location.reservationUrl ?? ""),
+          contactEmail: String(location.contactEmail ?? ""),
+          heroEyebrow: location.heroEyebrow ? String(location.heroEyebrow) : undefined,
+          heroTitle: location.heroTitle ? String(location.heroTitle) : undefined,
+          heroAccent: location.heroAccent ? String(location.heroAccent) : undefined,
+          heroDescription: location.heroDescription ? String(location.heroDescription) : undefined,
+          heroImageUrl: location.heroImage && typeof location.heroImage === "object" && "url" in location.heroImage
+            ? String((location.heroImage as { url: unknown }).url)
+            : undefined,
+          seoTitle: location.seoTitle ? String(location.seoTitle) : undefined,
+          seoDescription: location.seoDescription ? String(location.seoDescription) : undefined,
           }));
           setLocations(cmsLocations);
           setSelectedId((current) => cmsLocations.some((location) => location.id === current) ? current : cmsLocations[0].id);
@@ -135,6 +175,9 @@ export default function Home() {
             .map((category: Record<string, unknown>) => ({
               name: String(category.name),
               note: category.note ? String(category.note) : undefined,
+              locationSlugs: Array.isArray(category.locations)
+                ? category.locations.map((location: Record<string, unknown>) => String(location.slug))
+                : undefined,
               items: Array.isArray(category.items) ? category.items.map((item: Record<string, unknown>) => ({
                 name: String(item.name),
                 price: String(item.price),
@@ -176,6 +219,8 @@ export default function Home() {
           .map((location) => ({ location, miles: distanceInMiles(coords.latitude, coords.longitude, location.lat, location.lng) }))
           .sort((a, b) => a.miles - b.miles)[0];
         setSelectedId(nearest.location.id);
+        window.localStorage.setItem("kitchen-master-location", nearest.location.id);
+        setLocationChosen(true);
         setMiles(nearest.miles);
         setLocationState("found");
       },
@@ -186,6 +231,31 @@ export default function Home() {
 
   return (
     <main>
+      {!locationChosen && (
+        <section className="location-gateway" aria-labelledby="location-gateway-title">
+          <div className="gateway-brand"><span className="brand-mark">KM</span><span>KITCHEN MASTER</span></div>
+          <div className="gateway-copy">
+            <p className="kicker">WELCOME TO KITCHEN MASTER</p>
+            <h1 id="location-gateway-title">Choose your<br /><em>location.</em></h1>
+            <p>Menus, reservations, hours, and restaurant details are tailored to your selected Kitchen Master.</p>
+          </div>
+          <div className="gateway-locations">
+            {locations.map((location) => (
+              <button key={location.id} onClick={() => {
+                setSelectedId(location.id);
+                window.localStorage.setItem("kitchen-master-location", location.id);
+                setLocationChosen(true);
+              }}>
+                <small>{location.state}</small><strong>{location.name}</strong>
+                <span>{location.status === "open" ? "Enter location →" : "Coming soon"}</span>
+              </button>
+            ))}
+          </div>
+          <button className="gateway-nearest" onClick={findNearest} disabled={locationState === "loading"}>
+            {locationState === "loading" ? "Finding your nearest restaurant…" : "Use my current location"}
+          </button>
+        </section>
+      )}
       <header className="site-header">
         <a className="brand" href="#top" aria-label="Kitchen Master home">
           <span className="brand-mark">KM</span>
@@ -201,7 +271,7 @@ export default function Home() {
         <div className="header-actions">
           <label className="location-select">
             <span>Location</span>
-            <select value={selectedId} onChange={(event) => { setSelectedId(event.target.value); setMiles(null); setLocationState("idle"); }} aria-label="Choose restaurant location">
+            <select value={selectedId} onChange={(event) => { setSelectedId(event.target.value); window.localStorage.setItem("kitchen-master-location", event.target.value); setLocationChosen(true); setMiles(null); setLocationState("idle"); }} aria-label="Choose restaurant location">
               {locations.map((location) => <option value={location.id} key={location.id}>{location.name}{location.status === "coming-soon" ? " — Soon" : ""}</option>)}
             </select>
           </label>
@@ -210,12 +280,12 @@ export default function Home() {
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Toggle menu">{menuOpen ? "×" : "☰"}</button>
       </header>
 
-      <section className="hero" id="top">
+      <section className="hero" id="top" style={selectedLocation.heroImageUrl ? { backgroundImage: `url(${selectedLocation.heroImageUrl})` } : undefined}>
         <div className="hero-shade" />
         <div className="hero-copy">
-          <p className="kicker">{siteSettings.heroEyebrow}</p>
-          <h1>{siteSettings.heroTitle}<br /><em>{siteSettings.heroAccent}</em></h1>
-          <p className="hero-sub">{siteSettings.heroDescription.replace("{{location}}", selectedLocation.name)}</p>
+          <p className="kicker">{selectedLocation.heroEyebrow || siteSettings.heroEyebrow}</p>
+          <h1>{selectedLocation.heroTitle || siteSettings.heroTitle}<br /><em>{selectedLocation.heroAccent || siteSettings.heroAccent}</em></h1>
+          <p className="hero-sub">{(selectedLocation.heroDescription || siteSettings.heroDescription).replace("{{location}}", selectedLocation.name)}</p>
           <div className="hero-actions">
             <a className="button button-red" href="#menu">Explore the menu <span>↗</span></a>
             {selectedLocation.reservationUrl || selectedLocation.id === "suwanee" ? <a className="text-link" href={selectedLocation.reservationUrl || RESY_URL} target="_blank" rel="noreferrer">Book on Resy <span>→</span></a> : selectedLocation.status === "open" ? <a className="text-link" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order in {selectedLocation.name} <span>→</span></a> : <a className="text-link" href="#locations">Opening soon <span>↓</span></a>}
@@ -241,7 +311,7 @@ export default function Home() {
         <div className="switcher-intro"><span>OUR LOCATIONS</span><p>Choose your restaurant</p></div>
         <div className="switcher-list">
           {locations.map((location, index) => (
-            <button className={selectedId === location.id ? "active" : ""} onClick={() => { setSelectedId(location.id); setMiles(null); setLocationState("idle"); }} key={location.id}>
+            <button className={selectedId === location.id ? "active" : ""} onClick={() => { setSelectedId(location.id); window.localStorage.setItem("kitchen-master-location", location.id); setLocationChosen(true); setMiles(null); setLocationState("idle"); }} key={location.id}>
               <small>0{index + 1} · {location.state}</small>
               <strong>{location.name}</strong>
               <span>{location.status === "open" ? "View location →" : "Coming soon"}</span>
@@ -279,9 +349,9 @@ export default function Home() {
       <section className="full-menu" id="full-menu">
         <div className="full-menu-head"><div><p className="kicker">SUWANEE DINNER MENU</p><h2>The full menu.</h2></div><p>Handcrafted daily. Menu availability and pricing may change. Please tell your server about any allergies before ordering.</p></div>
         <div className="menu-tabs" role="tablist" aria-label="Menu categories">
-          {foodCategories.map((category) => <button role="tab" aria-selected={activeMenuCategory === category.name} className={activeMenuCategory === category.name ? "active" : ""} onClick={() => setActiveMenuCategory(category.name)} key={category.name}>{category.name}</button>)}
+          {availableFoodCategories.map((category) => <button role="tab" aria-selected={activeMenuCategory === category.name} className={activeMenuCategory === category.name ? "active" : ""} onClick={() => setActiveMenuCategory(category.name)} key={category.name}>{category.name}</button>)}
         </div>
-        {foodCategories.filter((category) => category.name === activeMenuCategory).map((category) => (
+        {availableFoodCategories.filter((category) => category.name === activeMenuCategory).map((category) => (
           <div className="menu-panel" role="tabpanel" key={category.name}>
             <div className="menu-panel-title"><span>菜單</span><div><h3>{category.name}</h3>{category.note && <p>{category.note}</p>}</div></div>
             <div className="menu-items">
@@ -299,9 +369,9 @@ export default function Home() {
       <section className="full-menu drinks-menu" id="drinks">
         <div className="full-menu-head"><div><p className="kicker">FROM THE BAR</p><h2>Pour something<br /><em>memorable.</em></h2></div><p>House cocktails inspired by Asian flavors, a considered wine and sake list, and thoughtful zero-proof drinks.</p></div>
         <div className="menu-tabs" role="tablist" aria-label="Drink categories">
-          {drinkCategories.map((category) => <button role="tab" aria-selected={activeDrinkCategory === category.name} className={activeDrinkCategory === category.name ? "active" : ""} onClick={() => setActiveDrinkCategory(category.name)} key={category.name}>{category.name}</button>)}
+          {availableDrinkCategories.map((category) => <button role="tab" aria-selected={activeDrinkCategory === category.name} className={activeDrinkCategory === category.name ? "active" : ""} onClick={() => setActiveDrinkCategory(category.name)} key={category.name}>{category.name}</button>)}
         </div>
-        {drinkCategories.filter((category) => category.name === activeDrinkCategory).map((category) => (
+        {availableDrinkCategories.filter((category) => category.name === activeDrinkCategory).map((category) => (
           <div className="menu-panel" role="tabpanel" key={category.name}>
             <div className="menu-panel-title"><span>乾杯</span><div><h3>{category.name}</h3>{category.note && <p>{category.note}</p>}</div></div>
             <div className="menu-items">

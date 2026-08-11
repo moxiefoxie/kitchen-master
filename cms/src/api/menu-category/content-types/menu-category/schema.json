@@ -13,6 +13,7 @@
     "menuType": { "type": "enumeration", "enum": ["food", "drink"], "required": true },
     "note": { "type": "text" },
     "sortOrder": { "type": "integer", "default": 0 },
-    "items": { "type": "relation", "relation": "oneToMany", "target": "api::menu-item.menu-item", "mappedBy": "category" }
+    "items": { "type": "relation", "relation": "oneToMany", "target": "api::menu-item.menu-item", "mappedBy": "category" },
+    "locations": { "type": "relation", "relation": "manyToMany", "target": "api::location.location", "mappedBy": "menuCategories" }
   }
 }
