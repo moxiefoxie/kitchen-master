@@ -85,7 +85,7 @@ export default function Home() {
           phone: String(location.phone ?? ""),
           lat: Number(location.latitude),
           lng: Number(location.longitude),
-          status: location.status === "coming-soon" ? "coming-soon" : "open",
+          status: location.locationStatus === "coming-soon" ? "coming-soon" : "open",
           hours: String(location.hours ?? ""),
           orderUrl: String(location.orderUrl ?? ""),
           reservationUrl: String(location.reservationUrl ?? ""),

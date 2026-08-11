@@ -17,7 +17,7 @@
     "phone": { "type": "string" },
     "latitude": { "type": "decimal" },
     "longitude": { "type": "decimal" },
-    "status": { "type": "enumeration", "enum": ["open", "coming-soon"], "default": "open", "required": true },
+    "locationStatus": { "type": "enumeration", "enum": ["open", "coming-soon"], "default": "open", "required": true },
     "hours": { "type": "text" },
     "orderUrl": { "type": "string" },
     "reservationUrl": { "type": "string" },
