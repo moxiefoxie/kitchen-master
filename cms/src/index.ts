@@ -10,7 +10,7 @@ const locations = [
     phone: '470-589-1112', latitude: 34.0236, longitude: -84.0519,
     locationStatus: 'open', hours: 'Tue–Fri 4:30–10 · Sat 11–10 · Sun 12–9:30',
     orderUrl: 'https://order.toasttab.com/online/kitchen-master-bistro-2-3131-lawrenceville-suwanee-rd-b5',
-    reservationUrl: 'https://resy.com/cities/suwanee-ga/venues/kitchen-master', sortOrder: 1,
+    reservationUrl: 'https://resy.com/cities/suwanee-ga/venues/kitchen-master-suwanee?date=2026-08-11&seats=2', sortOrder: 1,
   },
   {
     name: 'Frisco', slug: 'frisco', state: 'Texas', address: '9285 Preston Rd',
@@ -96,6 +96,9 @@ export default {
           status: 'published',
         });
       }
+      if (existing && location.slug === 'suwanee' && existing.reservationUrl !== location.reservationUrl) {
+        await strapi.documents('api::location.location').update({ documentId: existing.documentId, data: { reservationUrl: location.reservationUrl }, status: 'published' });
+      }
     }
 
     const existingSettings = await strapi.documents('api::site-setting.site-setting').findFirst();
@@ -109,7 +112,7 @@ export default {
           contactEmail: 'Management@kitchenmasterga.com',
           instagramUrl: 'https://www.instagram.com/kitchenmasterga/',
           facebookUrl: 'https://www.facebook.com/kitchenmasterga/',
-          defaultReservationUrl: 'https://resy.com/cities/suwanee-ga/venues/kitchen-master',
+          defaultReservationUrl: 'https://resy.com/cities/suwanee-ga/venues/kitchen-master-suwanee?date=2026-08-11&seats=2',
         },
         status: 'published',
       });

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { DRINK_CATEGORIES, MENU_CATEGORIES } from "./menuData";
 
-const RESY_URL = "https://resy.com/cities/suwanee-ga/venues/kitchen-master";
+const RESY_URL = "https://resy.com/cities/suwanee-ga/venues/kitchen-master-suwanee?date=2026-08-11&seats=2";
 
 type SiteSettings = {
   heroEyebrow: string;
@@ -410,7 +410,7 @@ export default function Home() {
         </div>
         <div className="menu-grid">
           {menuCards.map((card, index) => (
-            <a className="menu-card" href="https://www.kitchenmasterga.com/main-menu" target="_blank" rel="noreferrer" key={card.title}>
+            <a className="menu-card" href="#full-menu" key={card.title}>
               <div className="card-image"><img src={card.image} alt={card.title} /><span>0{index + 1}</span></div>
               <p>{card.eyebrow}</p><h3>{card.title}</h3><b>DISCOVER <span>→</span></b>
             </a>
@@ -467,7 +467,7 @@ export default function Home() {
       <section className="connect" id="contact">
         <div className="connect-intro"><p className="kicker dark">{homePage.connectEyebrow}</p><h2>{homePage.connectTitle}<br />{homePage.connectAccent}</h2></div>
         <div className="connect-links">
-          <a href={`mailto:${siteSettings.contactEmail}`}><span>01</span><div><small>Questions & feedback</small><strong>Contact us</strong></div><b>↗</b></a>
+          <a href="/pages/contact"><span>01</span><div><small>Questions & feedback</small><strong>Contact us</strong></div><b>↗</b></a>
           <a href="/pages/careers"><span>02</span><div><small>Join our team</small><strong>Careers</strong></div><b>↗</b></a>
           <a href="/pages/franchise"><span>03</span><div><small>Grow with us</small><strong>Franchise opportunities</strong></div><b>↗</b></a>
           <a href="/pages/private-dining"><span>04</span><div><small>Gather together</small><strong>Private dining</strong></div><b>↗</b></a>
