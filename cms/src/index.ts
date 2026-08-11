@@ -130,39 +130,24 @@ export default {
       }
     }
 
-    const homePage = await strapi.documents('api::site-page.site-page').findFirst({ filters: { slug: 'home' } });
-    if (homePage && !homePage.storyTitle) {
+    const existingHomepageSections = await strapi.documents('api::homepage-section.homepage-section').findMany({ limit: 1 });
+    if (existingHomepageSections.length === 0) {
       const [heroImage, storyImage, card1, card2, card3, featureImage, privateDiningImage] = await Promise.all([
         cmsImage('hero.png'), cmsImage('dining.png'), cmsImage('soup-dumplings.png'), cmsImage('lamb-chop.png'),
         cmsImage('szechuan-wonton.png'), cmsImage('spread.jpg'), cmsImage('private-room.png'),
       ]);
-      await strapi.documents('api::site-page.site-page').update({
-        documentId: homePage.documentId,
-        data: {
-          heroImage,
-          gatewayEyebrow: 'Welcome to Kitchen Master', gatewayTitle: 'Choose your', gatewayAccent: 'location.',
-          gatewayDescription: 'Menus, reservations, hours, and restaurant details are tailored to your selected Kitchen Master.',
-          storyEyebrow: 'Our philosophy', storyTitle: 'Old-world technique.', storyAccent: 'New-world spirit.',
-          storyBody: 'At Kitchen Master, Taiwanese and Japanese traditions meet a modern American point of view. Every fold, slice, and sizzle reflects our dedication to craft, flavor, and ingredients prepared fresh each day.', storyImage,
-          menuIntroEyebrow: 'What we’re known for', menuIntroTitle: 'Made with patience.', menuIntroAccent: 'Remembered by flavor.',
-          menuCard1Eyebrow: 'The signature', menuCard1Title: 'Soup Dumplings', menuCard1Image: card1,
-          menuCard2Eyebrow: 'From the wok', menuCard2Title: 'Modern Plates', menuCard2Image: card2,
-          menuCard3Eyebrow: 'Made to share', menuCard3Title: 'Small Plates', menuCard3Image: card3,
-          foodMenuTitle: 'The full menu.', foodMenuDescription: 'Handcrafted daily. Menu availability and pricing may change. Please tell your server about any allergies before ordering.',
-          foodMenuDisclaimer: 'V · Vegetarian|Raw · May be served raw or undercooked|Parties of six or more are subject to 20% gratuity',
-          drinkEyebrow: 'From the bar', drinkTitle: 'Pour something', drinkAccent: 'memorable.',
-          drinkDescription: 'House cocktails inspired by Asian flavors, a considered wine and sake list, and thoughtful zero-proof drinks.',
-          drinkDisclaimer: 'Must be 21+ with valid identification|Selections and vintages may change|Please enjoy responsibly',
-          featureEyebrow: 'Dinner, done differently', featureTitle: 'A table worth', featureAccent: 'gathering around.',
-          featureBody: 'From a quick dinner to a long celebration, every meal is made to be shared.', featureImage,
-          privateDiningEyebrow: 'Private dining', privateDiningTitle: 'Your occasion.', privateDiningAccent: 'Our craft.',
-          privateDiningBody: 'Host an intimate dinner or a full celebration in a space designed for memorable meals. Our team will help shape the room and menu around your event.',
-          privateDiningImage, privateDiningCaption: 'Private rooms · Custom menus · Personal service',
-          connectEyebrow: 'More from Kitchen Master', connectTitle: 'Come be part', connectAccent: 'of the story.',
-          footerTagline: 'Tradition meets innovation.', footerCopyright: '© 2026 Kitchen Master',
-        },
-        status: 'published',
-      });
+      const sections = [
+        { name:'Location Gateway',sectionKey:'location-gateway',eyebrow:'Welcome to Kitchen Master',title:'Choose your',accent:'location.',body:'Menus, reservations, hours, and restaurant details are tailored to your selected Kitchen Master.',image:heroImage,sortOrder:1 },
+        { name:'Our Story',sectionKey:'story',eyebrow:'Our philosophy',title:'Old-world technique.',accent:'New-world spirit.',body:'At Kitchen Master, Taiwanese and Japanese traditions meet a modern American point of view. Every fold, slice, and sizzle reflects our dedication to craft, flavor, and ingredients prepared fresh each day.',image:storyImage,sortOrder:2 },
+        { name:'Featured Menu',sectionKey:'featured-menu',eyebrow:'What we’re known for',title:'Made with patience.',accent:'Remembered by flavor.',items:[{eyebrow:'The signature',title:'Soup Dumplings'},{eyebrow:'From the wok',title:'Modern Plates'},{eyebrow:'Made to share',title:'Small Plates'}],images:[card1,card2,card3],sortOrder:3 },
+        { name:'Food Menu',sectionKey:'food-menu',title:'The full menu.',body:'Handcrafted daily. Menu availability and pricing may change. Please tell your server about any allergies before ordering.',items:['V · Vegetarian','Raw · May be served raw or undercooked','Parties of six or more are subject to 20% gratuity'],sortOrder:4 },
+        { name:'Drinks',sectionKey:'drinks',eyebrow:'From the bar',title:'Pour something',accent:'memorable.',body:'House cocktails inspired by Asian flavors, a considered wine and sake list, and thoughtful zero-proof drinks.',items:['Must be 21+ with valid identification','Selections and vintages may change','Please enjoy responsibly'],sortOrder:5 },
+        { name:'Dining Feature',sectionKey:'dining-feature',eyebrow:'Dinner, done differently',title:'A table worth',accent:'gathering around.',body:'From a quick dinner to a long celebration, every meal is made to be shared.',image:featureImage,sortOrder:6 },
+        { name:'Private Dining',sectionKey:'private-dining',eyebrow:'Private dining',title:'Your occasion.',accent:'Our craft.',body:'Host an intimate dinner or a full celebration in a space designed for memorable meals. Our team will help shape the room and menu around your event.',image:privateDiningImage,caption:'Private rooms · Custom menus · Personal service',linkLabel:'Plan your event',linkUrl:'/pages/private-dining',sortOrder:7 },
+        { name:'Connect Links',sectionKey:'connect',eyebrow:'More from Kitchen Master',title:'Come be part',accent:'of the story.',sortOrder:8 },
+        { name:'Footer',sectionKey:'footer',title:'Tradition meets innovation.',caption:'© 2026 Kitchen Master',sortOrder:9 },
+      ];
+      for (const section of sections) await strapi.documents('api::homepage-section.homepage-section').create({ data: section as any, status:'published' });
     }
 
     const existingCategories = await strapi.documents('api::menu-category.menu-category').findMany({ limit: 1 });

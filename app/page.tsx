@@ -218,6 +218,29 @@ export default function Home() {
           }
         }
 
+        if (Array.isArray(payload.homepageSections) && payload.homepageSections.length) {
+          const section = (key: string) => payload.homepageSections.find((item: Record<string, unknown>) => item.sectionKey === key) as Record<string, unknown> | undefined;
+          const value = (item: Record<string, unknown> | undefined, key: string, fallback: string) => item?.[key] ? String(item[key]) : fallback;
+          const image = (item: Record<string, unknown> | undefined, fallback?: string) => item?.image && typeof item.image === "object" && "url" in item.image ? String((item.image as {url:unknown}).url) : fallback;
+          const gateway=section("location-gateway"),story=section("story"),featured=section("featured-menu"),food=section("food-menu"),drinks=section("drinks"),dining=section("dining-feature"),privateDining=section("private-dining"),connect=section("connect"),footer=section("footer");
+          const cards=Array.isArray(featured?.items)?featured.items as Record<string,unknown>[]:[];
+          const cardImages=Array.isArray(featured?.images)?featured.images as {url?:unknown}[]:[];
+          setHomePage((current)=>({
+            ...current,
+            heroImageUrl:image(gateway,current.heroImageUrl),gatewayEyebrow:value(gateway,"eyebrow",current.gatewayEyebrow),gatewayTitle:value(gateway,"title",current.gatewayTitle),gatewayAccent:value(gateway,"accent",current.gatewayAccent),gatewayDescription:value(gateway,"body",current.gatewayDescription),
+            storyEyebrow:value(story,"eyebrow",current.storyEyebrow),storyTitle:value(story,"title",current.storyTitle),storyAccent:value(story,"accent",current.storyAccent),storyBody:value(story,"body",current.storyBody),storyImageUrl:image(story,current.storyImageUrl),
+            menuIntroEyebrow:value(featured,"eyebrow",current.menuIntroEyebrow),menuIntroTitle:value(featured,"title",current.menuIntroTitle),menuIntroAccent:value(featured,"accent",current.menuIntroAccent),
+            menuCard1Eyebrow:value(cards[0],"eyebrow",current.menuCard1Eyebrow),menuCard1Title:value(cards[0],"title",current.menuCard1Title),menuCard1ImageUrl:cardImages[0]?.url?String(cardImages[0].url):current.menuCard1ImageUrl,
+            menuCard2Eyebrow:value(cards[1],"eyebrow",current.menuCard2Eyebrow),menuCard2Title:value(cards[1],"title",current.menuCard2Title),menuCard2ImageUrl:cardImages[1]?.url?String(cardImages[1].url):current.menuCard2ImageUrl,
+            menuCard3Eyebrow:value(cards[2],"eyebrow",current.menuCard3Eyebrow),menuCard3Title:value(cards[2],"title",current.menuCard3Title),menuCard3ImageUrl:cardImages[2]?.url?String(cardImages[2].url):current.menuCard3ImageUrl,
+            foodMenuTitle:value(food,"title",current.foodMenuTitle),foodMenuDescription:value(food,"body",current.foodMenuDescription),foodMenuDisclaimer:Array.isArray(food?.items)?food.items.map(String).join("|"):current.foodMenuDisclaimer,
+            drinkEyebrow:value(drinks,"eyebrow",current.drinkEyebrow),drinkTitle:value(drinks,"title",current.drinkTitle),drinkAccent:value(drinks,"accent",current.drinkAccent),drinkDescription:value(drinks,"body",current.drinkDescription),drinkDisclaimer:Array.isArray(drinks?.items)?drinks.items.map(String).join("|"):current.drinkDisclaimer,
+            featureEyebrow:value(dining,"eyebrow",current.featureEyebrow),featureTitle:value(dining,"title",current.featureTitle),featureAccent:value(dining,"accent",current.featureAccent),featureBody:value(dining,"body",current.featureBody),featureImageUrl:image(dining,current.featureImageUrl),
+            privateDiningEyebrow:value(privateDining,"eyebrow",current.privateDiningEyebrow),privateDiningTitle:value(privateDining,"title",current.privateDiningTitle),privateDiningAccent:value(privateDining,"accent",current.privateDiningAccent),privateDiningBody:value(privateDining,"body",current.privateDiningBody),privateDiningImageUrl:image(privateDining,current.privateDiningImageUrl),privateDiningCaption:value(privateDining,"caption",current.privateDiningCaption),
+            connectEyebrow:value(connect,"eyebrow",current.connectEyebrow),connectTitle:value(connect,"title",current.connectTitle),connectAccent:value(connect,"accent",current.connectAccent),footerTagline:value(footer,"title",current.footerTagline),footerCopyright:value(footer,"caption",current.footerCopyright),
+          }));
+        }
+
         if (Array.isArray(payload.menuCategories) && payload.menuCategories.length > 0) {
           const normalizeCategories = (menuType: "food" | "drink") => payload.menuCategories
             .filter((category: Record<string, unknown>) => category.menuType === menuType)

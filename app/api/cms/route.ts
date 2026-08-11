@@ -54,6 +54,7 @@ export async function GET(incomingRequest: Request) {
       settings: content?.settings ?? null,
       menuCategories: content?.menuCategories ?? [],
       pages,
+      homepageSections: absoluteMedia(content?.homepageSections ?? []),
       preview: content?.preview ?? false,
     });
   } catch (error) {

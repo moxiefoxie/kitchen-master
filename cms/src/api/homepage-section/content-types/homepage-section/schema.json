@@ -1,0 +1,21 @@
+{
+  "kind": "collectionType",
+  "collectionName": "homepage_sections",
+  "info": { "singularName": "homepage-section", "pluralName": "homepage-sections", "displayName": "Homepage Section", "description": "Independently editable sections assembled into the scrolling homepage" },
+  "options": { "draftAndPublish": true },
+  "attributes": {
+    "name": { "type": "string", "required": true },
+    "sectionKey": { "type": "enumeration", "enum": ["location-gateway", "story", "featured-menu", "food-menu", "drinks", "dining-feature", "private-dining", "connect", "footer"], "required": true, "unique": true },
+    "eyebrow": { "type": "string" },
+    "title": { "type": "string" },
+    "accent": { "type": "string" },
+    "body": { "type": "text" },
+    "image": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "images": { "type": "media", "multiple": true, "allowedTypes": ["images"], "description": "Ordered images for card-based sections such as Featured Menu" },
+    "caption": { "type": "string" },
+    "items": { "type": "json", "description": "Optional cards or disclaimer lines for this section" },
+    "linkLabel": { "type": "string" },
+    "linkUrl": { "type": "string" },
+    "sortOrder": { "type": "integer", "default": 0 }
+  }
+}
