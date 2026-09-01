@@ -10,6 +10,13 @@ const locations = [
     phone: '470-589-1112', latitude: 34.0236, longitude: -84.0519,
     locationStatus: 'open', hours: 'Tue–Fri 4:30–10 · Sat 11–10 · Sun 12–9:30',
     orderUrl: 'https://order.toasttab.com/online/kitchen-master-bistro-2-3131-lawrenceville-suwanee-rd-b5',
+    instagramUrl: 'https://www.instagram.com/kitchenmaster.ga/',
+    googleReviewsUrl: 'https://www.google.com/maps/search/?api=1&query=Kitchen%20Master%20Suwanee',
+    googleRating: 4.5, googleReviewCount: '444 Google reviews',
+    reviews: [
+      { quote: 'Shaun provided the best service and the food was amazing.', author: 'Recent Suwanee guest', rating: 5 },
+      { quote: 'This was my first time at Kitchen Master and it won’t be my last!', author: 'Recent Suwanee guest', rating: 5 },
+    ],
     reservationUrl: 'https://resy.com/cities/suwanee-ga/venues/kitchen-master-suwanee?date=2026-08-11&seats=2', sortOrder: 1,
   },
   {
@@ -17,20 +24,29 @@ const locations = [
     city: 'Frisco, TX 75033', phone: '469-362-8001', latitude: 33.1548354,
     longitude: -96.8039115, locationStatus: 'open',
     hours: 'Mon–Thu 11–2:30, 4:30–9 · Fri–Sat until 9:30',
+    instagramUrl: 'https://www.instagram.com/kitchenmaster.tx/',
+    googleReviewsUrl: 'https://www.google.com/maps/search/?api=1&query=Kitchen%20Master%20Frisco',
+    googleRating: 4.3, googleReviewCount: '1,000+ Google reviews',
+    reviews: [
+      { quote: 'Everything we ordered was delicious — the xiaolongbao were juicy and flavorful.', author: 'Xiaoyu S. · Google', rating: 5 },
+      { quote: 'The shrimp were crispy outside, juicy inside, and full of flavor.', author: 'Thi Kim D. · Google', rating: 5 },
+    ],
     orderUrl: 'https://order.toasttab.com/online/kitchen-master-bistro-9285-preston-rd', sortOrder: 2,
   },
   {
     name: 'Southlake', slug: 'southlake', state: 'Texas', address: '3311 E State Hwy 114',
     city: 'Southlake, TX 76092', phone: '214-724-5600', latitude: 32.9369978,
     longitude: -97.1029086, locationStatus: 'open', hours: 'Tue–Thu 11–9 · Fri–Sat 11–10',
+    instagramUrl: 'https://www.instagram.com/kitchenmaster.tx/',
     orderUrl: 'https://order.toasttab.com/online/kitchen-master-bistro-southlake-3311-w-state-hwy-114', sortOrder: 3,
   },
   {
     name: 'Midtown Atlanta', slug: 'midtown', state: 'Georgia', address: 'Address to be announced',
     city: 'Atlanta, GA', phone: 'Coming soon', latitude: 33.7838, longitude: -84.3831,
+    instagramUrl: 'https://www.instagram.com/kitchenmaster.ga/',
     locationStatus: 'coming-soon', hours: 'Opening details coming soon', orderUrl: '', sortOrder: 4,
   },
-] as const;
+];
 
 const sitePages = [
   { title: 'Home', slug: 'home', pageType: 'home', heroTitle: 'Tradition,', heroAccent: 'mastered.', heroDescription: 'Soup dumplings, fresh sushi, and bold modern plates—crafted daily at Kitchen Master.', sortOrder: 1 },
@@ -73,7 +89,7 @@ export default {
     if (existingLocations.length === 0) {
       for (const location of locations) {
         await strapi.documents('api::location.location').create({
-          data: location,
+          data: location as any,
           status: 'published',
         });
       }
@@ -99,6 +115,19 @@ export default {
       if (existing && location.slug === 'suwanee' && existing.reservationUrl !== location.reservationUrl) {
         await strapi.documents('api::location.location').update({ documentId: existing.documentId, data: { reservationUrl: location.reservationUrl }, status: 'published' });
       }
+      if (existing && !existing.instagramUrl) {
+        await strapi.documents('api::location.location').update({
+          documentId: existing.documentId,
+          data: {
+            instagramUrl: location.instagramUrl,
+            googleReviewsUrl: 'googleReviewsUrl' in location ? location.googleReviewsUrl : undefined,
+            googleRating: 'googleRating' in location ? location.googleRating : undefined,
+            googleReviewCount: 'googleReviewCount' in location ? location.googleReviewCount : undefined,
+            reviews: 'reviews' in location ? location.reviews : [],
+          },
+          status: 'published',
+        });
+      }
     }
 
     const existingSettings = await strapi.documents('api::site-setting.site-setting').findFirst();
@@ -110,9 +139,36 @@ export default {
           heroAccent: 'mastered.',
           heroDescription: 'Soup dumplings, fresh sushi, and bold modern plates—crafted daily in {{location}}.',
           contactEmail: 'Management@kitchenmasterga.com',
-          instagramUrl: 'https://www.instagram.com/kitchenmasterga/',
+          instagramUrl: 'https://www.instagram.com/kitchenmaster.ga/',
           facebookUrl: 'https://www.facebook.com/kitchenmasterga/',
           defaultReservationUrl: 'https://resy.com/cities/suwanee-ga/venues/kitchen-master-suwanee?date=2026-08-11&seats=2',
+        },
+        status: 'published',
+      });
+    }
+
+    const existingCampaigns = await strapi.documents('api::campaign.campaign').findMany({ limit: 1 });
+    if (existingCampaigns.length === 0) {
+      const suwanee = await strapi.documents('api::location.location').findFirst({ filters: { slug: 'suwanee' } });
+      await strapi.documents('api::campaign.campaign').create({
+        data: {
+          name: '2026 Best of Gwinnett Voting', campaignType: 'external-cta', enabled: true,
+          startsAt: '2026-09-01T00:00:00.000Z', endsAt: '2026-12-31T23:59:59.000Z', priority: 100,
+          locations: suwanee ? [suwanee.documentId] : [], eyebrow: 'Best of Gwinnett · 2026',
+          title: 'Love Kitchen Master?', accent: 'Cast your vote.',
+          body: 'Help your Suwanee Kitchen Master earn Best of Gwinnett. Find us under Chinese Restaurants in Food & Drink.',
+          buttonLabel: 'Vote for Kitchen Master', buttonUrl: 'https://www.guidetogwinnett.com/best-of/vote/food-drink',
+          finePrint: 'Voting takes place on the official Best of Gwinnett website.',
+          dismissalKey: 'best-of-gwinnett-2026', delayMs: 1200,
+        },
+        status: 'published',
+      });
+      await strapi.documents('api::campaign.campaign').create({
+        data: {
+          name: 'Kitchen Master Insiders', campaignType: 'insiders', enabled: true, priority: 10,
+          eyebrow: 'Kitchen Master Insiders', title: 'Your table has', accent: 'its advantages.',
+          body: 'Join for restaurant news, special events, and rewards—with your selected restaurant as your preferred Kitchen Master.',
+          buttonLabel: 'Join the Insiders', dismissalKey: 'kitchen-master-insiders', delayMs: 1200,
         },
         status: 'published',
       });

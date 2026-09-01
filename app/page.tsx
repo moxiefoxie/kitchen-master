@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { DRINK_CATEGORIES, MENU_CATEGORIES } from "./menuData";
-
-const RESY_URL = "https://resy.com/cities/suwanee-ga/venues/kitchen-master-suwanee?date=2026-08-11&seats=2";
+import ResyEmbed from "./components/ResyEmbed";
 
 type SiteSettings = {
   heroEyebrow: string;
@@ -48,7 +47,7 @@ const DEFAULT_SITE_SETTINGS: SiteSettings = {
   heroAccent: "mastered.",
   heroDescription: "Soup dumplings, fresh sushi, and bold modern plates—crafted daily in {{location}}.",
   contactEmail: "Management@kitchenmasterga.com",
-  instagramUrl: "https://www.instagram.com/kitchenmasterga/",
+  instagramUrl: "https://www.instagram.com/kitchenmaster.ga/",
   facebookUrl: "https://www.facebook.com/kitchenmasterga/",
 };
 
@@ -73,7 +72,38 @@ type RestaurantLocation = {
   heroImageUrl?: string;
   seoTitle?: string;
   seoDescription?: string;
+  instagramUrl?: string;
+  googleReviewsUrl?: string;
+  googleRating?: string;
+  googleReviewCount?: string;
+  reviews?: Array<{ quote: string; author: string; rating?: number }>;
 };
+
+const BEST_OF_GWINNETT_URL = "https://www.guidetogwinnett.com/best-of/vote/food-drink";
+
+type Campaign = {
+  name: string;
+  campaignType: "insiders" | "external-cta";
+  enabled: boolean;
+  startsAt?: string;
+  endsAt?: string;
+  priority: number;
+  locations?: Array<{ slug: string }>;
+  eyebrow?: string;
+  title: string;
+  accent?: string;
+  body?: string;
+  buttonLabel?: string;
+  buttonUrl?: string;
+  finePrint?: string;
+  dismissalKey: string;
+  delayMs?: number;
+};
+
+const FALLBACK_CAMPAIGNS: Campaign[] = [
+  { name:"2026 Best of Gwinnett Voting",campaignType:"external-cta",enabled:true,startsAt:"2026-09-01T00:00:00.000Z",endsAt:"2026-12-31T23:59:59.000Z",priority:100,locations:[{slug:"suwanee"}],eyebrow:"Best of Gwinnett · 2026",title:"Love Kitchen Master?",accent:"Cast your vote.",body:"Help your Suwanee Kitchen Master earn Best of Gwinnett. Find us under Chinese Restaurants in Food & Drink.",buttonLabel:"Vote for Kitchen Master",buttonUrl:BEST_OF_GWINNETT_URL,finePrint:"Voting takes place on the official Best of Gwinnett website.",dismissalKey:"best-of-gwinnett-2026",delayMs:1200 },
+  { name:"Kitchen Master Insiders",campaignType:"insiders",enabled:true,priority:10,eyebrow:"Kitchen Master Insiders",title:"Your table has",accent:"its advantages.",body:"Join for restaurant news, special events, and rewards—with your selected restaurant as your preferred Kitchen Master.",buttonLabel:"Join the Insiders",dismissalKey:"kitchen-master-insiders",delayMs:1200 },
+];
 
 const DEFAULT_LOCATIONS: RestaurantLocation[] = [
   {
@@ -101,6 +131,19 @@ const DEFAULT_LOCATIONS: RestaurantLocation[] = [
   },
 ];
 
+const LOCATION_SOCIAL: Record<string, { instagram: string; handle: string; rating?: string; count?: string; reviews: Array<{ quote: string; author: string }> }> = {
+  suwanee: { instagram: "kitchenmaster.ga", handle: "@kitchenmaster.ga", rating: "4.5", count: "444 Google reviews", reviews: [
+    { quote: "Shaun provided the best service and the food was amazing.", author: "Recent Suwanee guest" },
+    { quote: "This was my first time at Kitchen Master and it won’t be my last!", author: "Recent Suwanee guest" },
+  ] },
+  frisco: { instagram: "kitchenmaster.tx", handle: "@kitchenmaster.tx", rating: "4.3", count: "1,000+ Google reviews", reviews: [
+    { quote: "Everything we ordered was delicious — the xiaolongbao were juicy and flavorful.", author: "Xiaoyu S. · Google" },
+    { quote: "The shrimp were crispy outside, juicy inside, and full of flavor.", author: "Thi Kim D. · Google" },
+  ] },
+  southlake: { instagram: "kitchenmaster.tx", handle: "@kitchenmaster.tx", reviews: [] },
+  midtown: { instagram: "kitchenmaster.ga", handle: "@kitchenmaster.ga", reviews: [] },
+};
+
 function distanceInMiles(lat1: number, lon1: number, lat2: number, lon2: number) {
   const radius = 3958.8;
   const toRad = (value: number) => (value * Math.PI) / 180;
@@ -121,9 +164,32 @@ export default function Home() {
   const [foodCategories, setFoodCategories] = useState(MENU_CATEGORIES);
   const [drinkCategories, setDrinkCategories] = useState(DRINK_CATEGORIES);
   const [locationChosen, setLocationChosen] = useState(false);
+  const [introPlaying, setIntroPlaying] = useState(true);
   const [activeMenuCategory, setActiveMenuCategory] = useState(MENU_CATEGORIES[0].name);
   const [activeDrinkCategory, setActiveDrinkCategory] = useState(DRINK_CATEGORIES[0].name);
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [insiderEmail, setInsiderEmail] = useState("");
+  const [insiderStatus, setInsiderStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const [pageScrolled, setPageScrolled] = useState(false);
+  const [campaigns, setCampaigns] = useState<Campaign[]>(FALLBACK_CAMPAIGNS);
   const selectedLocation = locations.find((location) => location.id === selectedId) ?? locations[0];
+  const socialFallback = LOCATION_SOCIAL[selectedLocation.id] ?? LOCATION_SOCIAL.suwanee;
+  const instagramHandle = selectedLocation.instagramUrl ? `@${selectedLocation.instagramUrl.replace(/\/$/, "").split("/").pop()}` : socialFallback.handle;
+  const locationSocial = {
+    instagram: selectedLocation.instagramUrl?.replace(/\/$/, "").split("/").pop() ?? socialFallback.instagram,
+    handle: instagramHandle,
+    rating: selectedLocation.googleRating ?? socialFallback.rating,
+    count: selectedLocation.googleReviewCount ?? socialFallback.count,
+    reviews: selectedLocation.reviews?.length ? selectedLocation.reviews : socialFallback.reviews,
+  };
+  const now = Date.now();
+  const activeCampaign = campaigns
+    .filter((campaign) => campaign.enabled)
+    .filter((campaign) => !campaign.startsAt || new Date(campaign.startsAt).getTime() <= now)
+    .filter((campaign) => !campaign.endsAt || new Date(campaign.endsAt).getTime() >= now)
+    .filter((campaign) => !campaign.locations?.length || campaign.locations.some((location) => location.slug === selectedId))
+    .sort((a, b) => b.priority - a.priority)[0];
   const availableFoodCategories = foodCategories.filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId));
   const availableDrinkCategories = drinkCategories.filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId));
   const menuCards = [
@@ -135,17 +201,57 @@ export default function Home() {
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
     const requestedLocation = search.get("location");
-    if (search.get("choose-location") === "1") {
-      window.localStorage.removeItem("kitchen-master-location");
-      setLocationChosen(false);
-      return;
-    }
-    const savedLocation = window.localStorage.getItem("kitchen-master-location");
-    if (requestedLocation || savedLocation) {
-      setSelectedId(requestedLocation || savedLocation || "suwanee");
-      setLocationChosen(true);
-    }
+    if (requestedLocation) setSelectedId(requestedLocation);
+    const timer = window.setTimeout(() => setIntroPlaying(false), 6500);
+    return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!locationChosen || introPlaying) return;
+    if (!activeCampaign) return;
+    const dismissalKey = `km-popup-${activeCampaign.dismissalKey}`;
+    if (window.sessionStorage.getItem(dismissalKey)) return;
+    const timer = window.setTimeout(() => setPopupOpen(true), activeCampaign.delayMs ?? 1200);
+    return () => window.clearTimeout(timer);
+  }, [locationChosen, introPlaying, selectedId, activeCampaign?.dismissalKey]);
+
+  useEffect(() => {
+    let stopTimer: number | undefined;
+    const handleScroll = () => {
+      setPageScrolled(window.scrollY > 20);
+      if (window.scrollY <= 20 || menuOpen) {
+        setHeaderVisible(true);
+        if (stopTimer) window.clearTimeout(stopTimer);
+        return;
+      }
+      setHeaderVisible(false);
+      if (stopTimer) window.clearTimeout(stopTimer);
+      stopTimer = window.setTimeout(() => setHeaderVisible(true), 450);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (stopTimer) window.clearTimeout(stopTimer);
+    };
+  }, [menuOpen]);
+
+  function closePopup() {
+    const dismissalKey = `km-popup-${activeCampaign?.dismissalKey ?? "campaign"}`;
+    window.sessionStorage.setItem(dismissalKey, "dismissed");
+    setPopupOpen(false);
+  }
+
+  async function joinInsiders(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setInsiderStatus("sending");
+    const response = await fetch("/api/insiders", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: insiderEmail, preferredLocation: selectedLocation.id }),
+    }).catch(() => null);
+    setInsiderStatus(response?.ok ? "success" : "error");
+  }
 
   useEffect(() => {
     if (availableFoodCategories.length && !availableFoodCategories.some((category) => category.name === activeMenuCategory)) {
@@ -185,6 +291,11 @@ export default function Home() {
             : undefined,
           seoTitle: location.seoTitle ? String(location.seoTitle) : undefined,
           seoDescription: location.seoDescription ? String(location.seoDescription) : undefined,
+          instagramUrl: location.instagramUrl ? String(location.instagramUrl) : undefined,
+          googleReviewsUrl: location.googleReviewsUrl ? String(location.googleReviewsUrl) : undefined,
+          googleRating: location.googleRating != null ? String(location.googleRating) : undefined,
+          googleReviewCount: location.googleReviewCount ? String(location.googleReviewCount) : undefined,
+          reviews: Array.isArray(location.reviews) ? location.reviews.map((review: Record<string, unknown>) => ({ quote:String(review.quote ?? ""),author:String(review.author ?? "Guest"),rating:review.rating == null ? undefined : Number(review.rating) })) : undefined,
           }));
           setLocations(cmsLocations);
           setSelectedId((current) => cmsLocations.some((location) => location.id === current) ? current : cmsLocations[0].id);
@@ -281,6 +392,17 @@ export default function Home() {
             setActiveDrinkCategory((current) => cmsDrinks.some((category: { name: string }) => category.name === current) ? current : cmsDrinks[0].name);
           }
         }
+
+        if (Array.isArray(payload.campaigns) && payload.campaigns.length > 0) {
+          setCampaigns(payload.campaigns.map((campaign: Record<string, unknown>) => ({
+            name:String(campaign.name ?? "Campaign"),campaignType:campaign.campaignType === "insiders" ? "insiders" : "external-cta",enabled:campaign.enabled !== false,
+            startsAt:campaign.startsAt ? String(campaign.startsAt) : undefined,endsAt:campaign.endsAt ? String(campaign.endsAt) : undefined,priority:Number(campaign.priority ?? 0),
+            locations:Array.isArray(campaign.locations) ? campaign.locations.map((location: Record<string, unknown>) => ({slug:String(location.slug)})) : [],
+            eyebrow:campaign.eyebrow ? String(campaign.eyebrow) : undefined,title:String(campaign.title ?? "Kitchen Master"),accent:campaign.accent ? String(campaign.accent) : undefined,
+            body:campaign.body ? String(campaign.body) : undefined,buttonLabel:campaign.buttonLabel ? String(campaign.buttonLabel) : undefined,buttonUrl:campaign.buttonUrl ? String(campaign.buttonUrl) : undefined,
+            finePrint:campaign.finePrint ? String(campaign.finePrint) : undefined,dismissalKey:String(campaign.dismissalKey ?? campaign.name ?? "campaign"),delayMs:Number(campaign.delayMs ?? 1200),
+          })));
+        }
       })
       .catch(() => undefined);
   }, []);
@@ -304,7 +426,6 @@ export default function Home() {
           .map((location) => ({ location, miles: distanceInMiles(coords.latitude, coords.longitude, location.lat, location.lng) }))
           .sort((a, b) => a.miles - b.miles)[0];
         setSelectedId(nearest.location.id);
-        window.localStorage.setItem("kitchen-master-location", nearest.location.id);
         setLocationChosen(true);
         setMiles(nearest.miles);
         setLocationState("found");
@@ -316,8 +437,18 @@ export default function Home() {
 
   return (
     <main>
+      {introPlaying && <section className="launch-reveal" aria-label="Kitchen Master is loading">
+        <div className="pickup-group">
+          <img className="launch-chopstick launch-chopstick-rear" src="/images/chopstick-rear.png" alt="" />
+          <img className="launch-dumpling" src="/images/dumpling-cutout.png" alt="" />
+          <img className="launch-chopstick launch-chopstick-front" src="/images/chopstick-front.png" alt="" />
+          <div className="launch-steam" aria-hidden="true"><span /><span /><span /></div>
+        </div>
+        <p>Kitchen Master</p>
+      </section>}
       {!locationChosen && (
         <section className="location-gateway" aria-labelledby="location-gateway-title">
+          <div className="gateway-dumpling gateway-logo-final" aria-hidden="true"><img src="/images/logo-transparent-v2.png" alt="" /></div>
           <div className="gateway-brand"><span className="brand-mark">KM</span><span>KITCHEN MASTER</span></div>
           <div className="gateway-copy">
             <p className="kicker">{homePage.gatewayEyebrow}</p>
@@ -328,7 +459,6 @@ export default function Home() {
             {locations.map((location) => (
               <button key={location.id} onClick={() => {
                 setSelectedId(location.id);
-                window.localStorage.setItem("kitchen-master-location", location.id);
                 setLocationChosen(true);
               }}>
                 <small>{location.state}</small><strong>{location.name}</strong>
@@ -341,7 +471,7 @@ export default function Home() {
           </button>
         </section>
       )}
-      <header className="site-header">
+      <header className={`site-header ${headerVisible ? "header-visible" : "header-hidden"} ${pageScrolled ? "header-scrolled" : ""}`}>
         <a className="brand" href="#top" aria-label="Kitchen Master home">
           <span className="brand-mark">KM</span>
           <span>KITCHEN MASTER</span>
@@ -349,22 +479,19 @@ export default function Home() {
         <nav className={menuOpen ? "nav nav-open" : "nav"} aria-label="Main navigation">
           <a href="#menu" onClick={() => setMenuOpen(false)}>Menu</a>
           <a href="#drinks" onClick={() => setMenuOpen(false)}>Drinks</a>
+          {selectedLocation.id === "suwanee" && <a href="#reservations" onClick={() => setMenuOpen(false)}>Reserve</a>}
           <a href="#story" onClick={() => setMenuOpen(false)}>Our Story</a>
           <a href="#locations" onClick={() => setMenuOpen(false)}>Locations</a>
           <a href="#events" onClick={() => setMenuOpen(false)}>Private Dining</a>
+          <a href="#contact" onClick={() => setMenuOpen(false)}>Join Our Team</a>
         </nav>
         <div className="header-actions">
           <label className="location-select">
             <span>Location</span>
-            <select value={selectedId} onChange={(event) => { setSelectedId(event.target.value); window.localStorage.setItem("kitchen-master-location", event.target.value); setLocationChosen(true); setMiles(null); setLocationState("idle"); }} aria-label="Choose restaurant location">
+            <select value={selectedId} onChange={(event) => { setSelectedId(event.target.value); setLocationChosen(true); setMiles(null); setLocationState("idle"); }} aria-label="Choose restaurant location">
               {locations.map((location) => <option value={location.id} key={location.id}>{location.name}{location.status === "coming-soon" ? " — Soon" : ""}</option>)}
             </select>
           </label>
-          <button className="change-location" onClick={() => {
-            window.localStorage.removeItem("kitchen-master-location");
-            setLocationChosen(false);
-            setMenuOpen(false);
-          }}>Change location</button>
           {selectedLocation.status === "open" ? <a className="header-cta" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order online</a> : <a className="header-cta" href="#locations">Coming soon</a>}
         </div>
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Toggle menu">{menuOpen ? "×" : "☰"}</button>
@@ -378,14 +505,14 @@ export default function Home() {
           <p className="hero-sub">{siteSettings.heroDescription.replace("{{location}}", selectedLocation.name)}</p>
           <div className="hero-actions">
             <a className="button button-red" href="#menu">Explore the menu <span>↗</span></a>
-            {selectedLocation.reservationUrl || selectedLocation.id === "suwanee" ? <a className="text-link" href={selectedLocation.reservationUrl || RESY_URL} target="_blank" rel="noreferrer">Book on Resy <span>→</span></a> : selectedLocation.status === "open" ? <a className="text-link" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order in {selectedLocation.name} <span>→</span></a> : <a className="text-link" href="#locations">Opening soon <span>↓</span></a>}
+            {selectedLocation.id === "suwanee" ? <a className="text-link" href="#reservations">Book a table <span>↓</span></a> : selectedLocation.status === "open" ? <a className="text-link" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order in {selectedLocation.name} <span>→</span></a> : <a className="text-link" href="#locations">Opening soon <span>↓</span></a>}
           </div>
         </div>
         <div className="hero-stamp"><span>小籠包</span><small>HANDCRAFTED<br />IN {selectedLocation.name.toUpperCase()}</small></div>
         <a className="scroll-note" href="#story">SCROLL TO DISCOVER <span>↓</span></a>
       </section>
 
-      <section className="location-bar" id="locations">
+      <section className="location-bar">
         <div className="location-title"><span className="pin">⌖</span><div><small>{locationState === "found" ? "YOUR NEAREST KITCHEN MASTER" : "FIND YOUR KITCHEN MASTER"}</small><strong>{selectedLocation.name}</strong></div></div>
         <div className="location-detail"><span>{selectedLocation.address}<br />{selectedLocation.city}</span><span className="open"><i /> {selectedLocation.status === "open" ? selectedLocation.hours : "Coming soon"}</span></div>
         <div className="location-actions">
@@ -393,22 +520,11 @@ export default function Home() {
           {locationState === "denied" && <span className="distance">Location unavailable — choose a restaurant below</span>}
           <button onClick={findNearest} disabled={locationState === "loading"}>{locationState === "loading" ? "Locating…" : "Use my location"}</button>
           <a href={`https://maps.google.com/?q=${encodeURIComponent(`${selectedLocation.address}, ${selectedLocation.city}`)}`} target="_blank" rel="noreferrer">Get directions ↗</a>
-          {(selectedLocation.reservationUrl || selectedLocation.id === "suwanee") && <a className="location-book" href={selectedLocation.reservationUrl || RESY_URL} target="_blank" rel="noreferrer">Book on Resy ↗</a>}
+          {selectedLocation.id === "suwanee" && <a className="location-book" href="#reservations">Book a table ↓</a>}
         </div>
       </section>
 
-      <section className="location-switcher" aria-label="Choose a Kitchen Master location">
-        <div className="switcher-intro"><span>OUR LOCATIONS</span><p>Choose your restaurant</p></div>
-        <div className="switcher-list">
-          {locations.map((location, index) => (
-            <button className={selectedId === location.id ? "active" : ""} onClick={() => { setSelectedId(location.id); window.localStorage.setItem("kitchen-master-location", location.id); setLocationChosen(true); setMiles(null); setLocationState("idle"); }} key={location.id}>
-              <small>0{index + 1} · {location.state}</small>
-              <strong>{location.name}</strong>
-              <span>{location.status === "open" ? "View location →" : "Coming soon"}</span>
-            </button>
-          ))}
-        </div>
-      </section>
+      {selectedLocation.id === "suwanee" && <section className="reservations" id="reservations"><ResyEmbed /></section>}
 
       <section className="story" id="story">
         <div className="story-label"><span>01</span><p>{homePage.storyEyebrow}</p></div>
@@ -482,15 +598,77 @@ export default function Home() {
         <div className="events-image"><img src={homePage.privateDiningImageUrl} alt="Private dining room at Kitchen Master" /><span>{homePage.privateDiningCaption}</span></div>
       </section>
 
+      <section className="social-proof" aria-labelledby="social-proof-title">
+        <div className="social-proof-head"><p className="kicker dark">From our guests</p><h2 id="social-proof-title">Loved locally.<br /><em>Shared often.</em></h2><p>See what guests are saying about Kitchen Master {selectedLocation.name}, then follow along for new dishes and behind-the-scenes moments.</p></div>
+        <div className="social-embeds">
+          <div className="google-reviews-live">
+            <div className="google-review-summary"><div><span className="google-g">G</span><small>GOOGLE REVIEWS · {selectedLocation.name}</small></div>{locationSocial.rating ? <><strong>{locationSocial.rating}</strong><div className="review-stars">★★★★★</div><p>{locationSocial.count}</p></> : <><strong>New</strong><p>Reviews will appear as this location opens.</p></>}</div>
+            <div className="visible-reviews">{locationSocial.reviews.map((review, index) => <article key={`${selectedLocation.id}-${index}`}><div className="review-stars">★★★★★</div><blockquote>“{review.quote}”</blockquote><small>{review.author}</small></article>)}</div>
+            <a className="under-link" href={selectedLocation.googleReviewsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`Kitchen Master ${selectedLocation.address} ${selectedLocation.city}`)}`} target="_blank" rel="noreferrer">VIEW ALL ON GOOGLE <span>↗</span></a>
+          </div>
+          <div className="instagram-live"><div className="instagram-live-head"><div><small>LIVE FROM INSTAGRAM</small><strong>{locationSocial.handle}</strong></div><a href={`https://www.instagram.com/${locationSocial.instagram}/`} target="_blank" rel="noreferrer">Follow ↗</a></div><iframe key={locationSocial.instagram} title={`${locationSocial.handle} Instagram feed`} src={`https://www.instagram.com/${locationSocial.instagram}/embed`} loading="lazy" /></div>
+        </div>
+      </section>
+
+      <section className="locations-section" id="locations" aria-labelledby="locations-title" style={{padding:"clamp(78px, 9vw, 130px) 7vw",background:"#171513",color:"white",scrollMarginTop:88}}>
+        <div className="locations-section-head" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(min(100%, 360px), 1fr))",gap:"32px 8vw",alignItems:"end",marginBottom:58}}>
+          <div>
+            <p className="kicker" style={{margin:"0 0 28px",fontSize:9,fontWeight:800,letterSpacing:2.5,textTransform:"uppercase",color:"#aaa39b"}}>Our restaurants</p>
+            <h2 id="locations-title" style={{margin:0,fontSize:"clamp(54px, 6vw, 86px)",fontWeight:400,lineHeight:.94,letterSpacing:-2}}>Find your<br /><em style={{color:"#b44a47",fontWeight:400}}>Kitchen Master.</em></h2>
+          </div>
+          <p style={{maxWidth:480,margin:0,color:"#aaa39b",font:"17px/1.7 Georgia, serif"}}>Explore every Kitchen Master location and choose the restaurant you’d like to visit.</p>
+        </div>
+        <div className="locations-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(min(100%, 250px), 1fr))",border:"1px solid #48433f"}}>
+          {locations.map((location, index) => (
+            <article className={`location-card ${selectedId === location.id ? "active" : ""}`} style={{position:"relative",minHeight:370,padding:32,display:"flex",flexDirection:"column",borderRight:"1px solid #48433f",background:selectedId === location.id ? "#292421" : "#201d1b",boxShadow:selectedId === location.id ? "inset 0 4px #882020" : "none"}} key={location.id}>
+              <div className="location-card-top" style={{minHeight:28,display:"flex",justifyContent:"space-between",gap:12}}><small style={{fontSize:8,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",color:"#918a84"}}>0{index + 1} · {location.state}</small>{selectedId === location.id && <span style={{fontSize:8,fontWeight:800,letterSpacing:1.3,textTransform:"uppercase",color:"#d06763"}}>Current</span>}</div>
+              <h3 style={{margin:"30px 0 20px",font:"36px/1 Georgia, serif"}}>{location.name}</h3>
+              <p style={{margin:0,color:"#c2bbb4",font:"15px/1.65 Georgia, serif"}}>{location.address}<br />{location.city}</p>
+              <p className="location-card-hours" style={{margin:"20px 0 0",color:"#817a74",font:"13px/1.6 Georgia, serif"}}>{location.hours}</p>
+              <div className="location-card-actions" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:18,marginTop:"auto",paddingTop:26,borderTop:"1px solid #3c3834"}}>
+                {location.status === "open" ? <>
+                  <button style={{padding:0,border:0,background:"none",color:"#d06763",fontSize:8,fontWeight:800,letterSpacing:1.3,textTransform:"uppercase",cursor:"pointer"}} onClick={() => showLocation(location.id)}>Select →</button>
+                  <a style={{color:"white",fontSize:8,fontWeight:800,letterSpacing:1.3,textTransform:"uppercase"}} href={`https://maps.google.com/?q=${encodeURIComponent(`${location.address}, ${location.city}`)}`} target="_blank" rel="noreferrer">Directions ↗</a>
+                </> : <span style={{color:"#918a84",fontSize:8,fontWeight:800,letterSpacing:1.3,textTransform:"uppercase"}}>Coming soon</span>}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="connect" id="contact">
         <div className="connect-intro"><p className="kicker dark">{homePage.connectEyebrow}</p><h2>{homePage.connectTitle}<br />{homePage.connectAccent}</h2></div>
         <div className="connect-links">
           <a href="/pages/contact"><span>01</span><div><small>Questions & feedback</small><strong>Contact us</strong></div><b>↗</b></a>
-          <a href="/pages/careers"><span>02</span><div><small>Join our team</small><strong>Careers</strong></div><b>↗</b></a>
+          <a href={`/careers/${selectedLocation.id}`}><span>02</span><div><small>Join our {selectedLocation.name} team</small><strong>Careers</strong></div><b>↗</b></a>
           <a href="/pages/franchise"><span>03</span><div><small>Grow with us</small><strong>Franchise opportunities</strong></div><b>↗</b></a>
           <a href="/pages/private-dining"><span>04</span><div><small>Gather together</small><strong>Private dining</strong></div><b>↗</b></a>
         </div>
       </section>
+
+      {popupOpen && activeCampaign && <div className="campaign-backdrop" role="presentation" style={{position:"fixed",inset:0,zIndex:3000,padding:24,display:"grid",placeItems:"center",background:"rgba(13,11,9,.76)",backdropFilter:"blur(8px)"}} onMouseDown={(event) => { if (event.target === event.currentTarget) closePopup(); }}>
+        <section className="campaign-popup" role="dialog" aria-modal="true" aria-labelledby="campaign-title" style={{position:"relative",width:"min(720px, 100%)",minHeight:480,padding:"64px clamp(32px, 6vw, 68px)",overflow:"hidden",border:"1px solid #d3cbc0",background:"radial-gradient(circle at 88% 14%, #e8d7ca 0, transparent 32%), #f5f1e9",color:"#171513",boxShadow:"0 32px 100px rgba(0,0,0,.55)"}}>
+          <button className="campaign-close" style={{position:"absolute",right:24,top:20,zIndex:3,width:42,height:42,border:"1px solid #9d958a",borderRadius:"50%",background:"transparent",fontSize:27,cursor:"pointer"}} onClick={closePopup} aria-label="Close popup">×</button>
+          <div aria-hidden="true" style={{position:"absolute",right:-105,bottom:-145,width:340,height:340,borderRadius:"50%",background:"#882020"}} />
+          <div className="campaign-mark" aria-hidden="true" style={{position:"absolute",zIndex:1,right:34,bottom:30,width:76,height:76,display:"grid",placeItems:"center",border:"2px solid white",borderRadius:"50%",color:"white",font:"700 22px Georgia, serif"}}>KM</div>
+          {activeCampaign?.campaignType === "external-cta" ? <>
+            <p className="kicker dark" style={{position:"relative",zIndex:2,margin:"0 0 28px",fontSize:10,fontWeight:800,letterSpacing:3,textTransform:"uppercase",color:"#766f67"}}>{activeCampaign.eyebrow}</p>
+            <h2 id="campaign-title" style={{position:"relative",zIndex:2,margin:"0 0 24px",maxWidth:560,fontSize:"clamp(48px, 6vw, 72px)",fontWeight:400,lineHeight:.93,letterSpacing:-2}}>{activeCampaign.title}<br /><em style={{color:"#882020",fontWeight:400}}>{activeCampaign.accent}</em></h2>
+            <p style={{position:"relative",zIndex:2,maxWidth:500,margin:"0 0 28px",color:"#5e5851",font:"18px/1.6 Georgia, serif"}}>{activeCampaign.body}</p>
+            <a className="button button-red" style={{position:"relative",zIndex:2,display:"inline-flex",alignItems:"center",justifyContent:"space-between",gap:36,minWidth:310}} href={activeCampaign.buttonUrl || "#"} target="_blank" rel="noreferrer" onClick={closePopup}>{activeCampaign.buttonLabel || "Learn more"} <span>↗</span></a>
+            {activeCampaign.finePrint && <small style={{position:"relative",zIndex:2,display:"block",maxWidth:400,marginTop:16,color:"#746e67",fontSize:8,fontWeight:800,letterSpacing:1.2,textTransform:"uppercase"}}>{activeCampaign.finePrint}</small>}
+          </> : <>
+            <p className="kicker dark" style={{position:"relative",zIndex:2,margin:"0 0 28px",fontSize:10,fontWeight:800,letterSpacing:3,textTransform:"uppercase",color:"#766f67"}}>{activeCampaign?.eyebrow || "Kitchen Master Insiders"}</p>
+            <h2 id="campaign-title" style={{position:"relative",zIndex:2,margin:"0 0 24px",maxWidth:560,fontSize:"clamp(48px, 6vw, 72px)",fontWeight:400,lineHeight:.93,letterSpacing:-2}}>{activeCampaign?.title || "Your table has"}<br /><em style={{color:"#882020",fontWeight:400}}>{activeCampaign?.accent || "its advantages."}</em></h2>
+            <p style={{position:"relative",zIndex:2,maxWidth:500,margin:"0 0 28px",color:"#5e5851",font:"18px/1.6 Georgia, serif"}}>{(activeCampaign?.body || "Join for restaurant news, special events, and rewards—with your selected restaurant as your preferred Kitchen Master.").replace("your selected restaurant", selectedLocation.name)}</p>
+            {insiderStatus === "success" ? <div className="campaign-success" style={{position:"relative",zIndex:2,maxWidth:510,padding:20,border:"1px solid #bdb4a8",background:"#fffdf9",font:"18px Georgia, serif"}}>You’re on the list. Welcome inside.</div> : <form className="insiders-form" style={{position:"relative",zIndex:2,maxWidth:510,display:"flex",flexWrap:"wrap",gap:10}} onSubmit={joinInsiders}>
+              <label style={{flex:"1 1 240px"}}><span style={{position:"absolute",width:1,height:1,overflow:"hidden"}}>Email address</span><input style={{width:"100%",height:54,padding:"0 18px",border:"1px solid #bdb4a8",background:"#fffdf9",font:"16px Georgia, serif"}} type="email" value={insiderEmail} onChange={(event) => setInsiderEmail(event.target.value)} placeholder="you@example.com" required /></label>
+              <button className="button button-red" style={{height:54,border:0,cursor:"pointer"}} disabled={insiderStatus === "sending"}>{insiderStatus === "sending" ? "Joining…" : (activeCampaign?.buttonLabel || "Join the Insiders")} <span>→</span></button>
+              {insiderStatus === "error" && <small style={{flexBasis:"100%",color:"#882020"}}>Signup isn’t connected yet. Please try again later.</small>}
+            </form>}
+          </>}
+        </section>
+      </div>}
 
       <footer>
         <div className="footer-top"><div className="footer-brand"><span className="brand-mark">KM</span><h2>KITCHEN<br />MASTER</h2><p>{homePage.footerTagline}</p></div><div className="footer-locations"><small>GEORGIA</small><button onClick={() => showLocation("suwanee")}>Suwanee <span>→</span></button><button onClick={() => showLocation("midtown")}>Midtown Atlanta <em>Coming soon</em></button></div><div className="footer-locations"><small>TEXAS</small><button onClick={() => showLocation("frisco")}>Frisco <span>→</span></button><button onClick={() => showLocation("southlake")}>Southlake <span>→</span></button></div><div><small>FOLLOW</small><a href={siteSettings.instagramUrl} target="_blank" rel="noreferrer">Instagram ↗</a><a href={siteSettings.facebookUrl} target="_blank" rel="noreferrer">Facebook ↗</a></div></div>

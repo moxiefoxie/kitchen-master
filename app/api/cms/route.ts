@@ -55,6 +55,7 @@ export async function GET(incomingRequest: Request) {
       menuCategories: content?.menuCategories ?? [],
       pages,
       homepageSections: absoluteMedia(content?.homepageSections ?? []),
+      campaigns: absoluteMedia(content?.campaigns ?? []),
       preview: content?.preview ?? false,
     });
   } catch (error) {
