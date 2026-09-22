@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { STRAPI_URL } from "@/lib/strapi";
+import { sendTransactionalEmail, submissionIdempotencyKey, transactionalEmailConfigured } from "@/lib/email";
+import { inquiryEmail } from "@/lib/emailTemplates";
+
+export const runtime = "nodejs";
 
 type InquiryType = "contact" | "private-dining" | "franchise";
 type CmsLocation = { name?: unknown; slug?: unknown; contactEmail?: unknown; privateDiningEmail?: unknown };
@@ -44,7 +48,7 @@ async function getCmsContent(): Promise<CmsContent | null> {
 
 export async function POST(request: Request) {
   const webhookUrl = process.env.INQUIRY_WEBHOOK_URL;
-  if (!webhookUrl) {
+  if (!transactionalEmailConfigured() && !webhookUrl) {
     return NextResponse.json({ error:"Website inquiries are not configured yet." }, { status:503 });
   }
 
@@ -98,16 +102,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error:"This inquiry recipient is not configured in Strapi." }, { status:503 });
   }
 
-  const outbound = new FormData();
-  outbound.set("inquiryType", inquiryType);
-  outbound.set("source", "website-inquiry");
-  outbound.set("recipientEmail", recipient);
-  if (requestedSlug) outbound.set("location", requestedSlug);
-  if (locationName) outbound.set("locationName", locationName);
-  for (const [field, value] of Object.entries(values)) outbound.set(field, value);
+  let delivered = false;
+  if (transactionalEmailConfigured()) {
+    const message = inquiryEmail({ type:inquiryType, locationName, values });
+    const result = await sendTransactionalEmail({
+      to: recipient,
+      replyTo: values.email,
+      ...message,
+      tags: [
+        { name:"source", value:"website" },
+        { name:"form", value:inquiryType },
+        { name:"location", value:requestedSlug },
+      ],
+      idempotencyKey: submissionIdempotencyKey(inquiryType, { ...values, location:requestedSlug }),
+    });
+    delivered = result.ok;
+  } else if (webhookUrl) {
+    const outbound = new FormData();
+    outbound.set("inquiryType", inquiryType);
+    outbound.set("source", "website-inquiry");
+    outbound.set("recipientEmail", recipient);
+    if (requestedSlug) outbound.set("location", requestedSlug);
+    if (locationName) outbound.set("locationName", locationName);
+    for (const [field, value] of Object.entries(values)) outbound.set(field, value);
+    const response = await fetch(webhookUrl, { method:"POST", body:outbound }).catch(() => null);
+    delivered = response?.ok ?? false;
+  }
 
-  const response = await fetch(webhookUrl, { method:"POST", body:outbound }).catch(() => null);
-  if (!response?.ok) {
+  if (!delivered) {
     return NextResponse.json({ error:"Your inquiry could not be submitted." }, { status:502 });
   }
 
