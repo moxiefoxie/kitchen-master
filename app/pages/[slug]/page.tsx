@@ -214,7 +214,7 @@ export default async function CmsPage({ params, searchParams }: { params:Promise
 
   return <main className="cms-page interior-page" style={background ? { backgroundImage:`linear-gradient(90deg,#11100ff2,#11100f88),url(${background})` } : undefined}>
     <SiteHeader location={selected} />
-    <section className="cms-page-hero">
+    <section className={`cms-page-hero${isInquiryPage ? " inquiry-hero" : ""}`}>
       <p className="kicker">{page.heroEyebrow || page.title}{(slug === "contact" || slug === "private-dining") && ` · ${selected.name}`}</p>
       <h1>{page.heroTitle || page.title}<br/><em>{page.heroAccent}</em></h1>
       {page.heroDescription && <p>{page.heroDescription}</p>}
@@ -225,7 +225,7 @@ export default async function CmsPage({ params, searchParams }: { params:Promise
         {page.sections?.map((section, index) => <article className="cms-content-block" key={index}>{section.eyebrow && <small>{section.eyebrow}</small>}{section.heading && <h2>{section.heading}</h2>}{section.body && <p>{section.body}</p>}</article>)}
         {(slug === "contact" || slug === "private-dining") && <aside className="page-location-card"><small>YOUR SELECTED RESTAURANT</small><h3>{selected.name}</h3><p>{selected.address}<br/>{selected.city}</p>{selected.phone && <a href={`tel:${selected.phone.replace(/[^\d+]/g, "")}`}>{selected.phone}</a>}{selected.hours && <p>{selected.hours}</p>}</aside>}
       </div>
-      <div>
+      <div className="inquiry-panel">
         {query.submitted === "1" ? <section className="inquiry-success"><small>MESSAGE RECEIVED</small><h2>Thank you.</h2><p>{slug === "franchise" ? "Our development team will review your information and follow up when there may be a fit." : `Your message has been sent to the ${selected.name} team.`}</p></section> : <>
           <div className="inquiry-form-intro"><small>{formConfig.formEyebrow || (slug === "contact" ? "SEND A NOTE" : slug === "private-dining" ? "EVENT INQUIRY" : "FRANCHISE INQUIRY")}</small><h2>{formConfig.formTitle ? locationCopy(formConfig.formTitle) : slug === "contact" ? `Contact ${selected.name}.` : slug === "private-dining" ? `Plan with ${selected.name}.` : "Introduce yourself."}</h2><p>{formConfig.formDescription || "Required fields help us route your message to the right team."}</p></div>
           {slug === "contact" ? <ContactForm locations={locations} selected={selected} config={formConfig} /> : slug === "private-dining" ? <PrivateDiningForm locations={locations} selected={selected} config={formConfig} /> : <FranchiseForm locationSlug={selected.slug} config={formConfig} />}
