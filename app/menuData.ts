@@ -1,4 +1,12 @@
-export type MenuItem = { name: string; price: string; description?: string; tags?: string[] };
+export type MenuAllergen = { name: string; slug: string; shortLabel?: string };
+export type MenuItem = {
+  name: string;
+  price: string;
+  description?: string;
+  tags?: string[];
+  allergens?: MenuAllergen[];
+  locationSlugs?: string[];
+};
 export type MenuCategory = { name: string; note?: string; items: MenuItem[]; locationSlugs?: string[] };
 
 export const MENU_CATEGORIES: MenuCategory[] = [

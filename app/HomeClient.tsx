@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DRINK_CATEGORIES, HAPPY_HOUR_CATEGORIES, MENU_CATEGORIES } from "./menuData";
 import AnnouncementBanner, { type AnnouncementHappening } from "./components/AnnouncementBanner";
+import AllergenIcons from "./components/AllergenIcons";
 import HeaderNav from "./components/HeaderNav";
 import ResyEmbed from "./components/ResyEmbed";
 
@@ -261,9 +262,15 @@ export default function HomeClient({ initialLocation, playIntro }: { initialLoca
     .filter((item) => !item.endsAt || new Date(item.endsAt).getTime() >= now)
     .filter((item) => !item.locations?.length || item.locations.some((location) => location.slug === selectedId))
     .sort((a, b) => Number(b.priority ?? 0) - Number(a.priority ?? 0))[0];
-  const availableFoodCategories = foodCategories.filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId));
-  const availableDrinkCategories = drinkCategories.filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId));
-  const availableHappyHourCategories = happyHourCategories.filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId));
+  const categoriesForLocation = (categories: typeof foodCategories) => categories
+    .filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId))
+    .map((category) => ({
+      ...category,
+      items: category.items.filter((item) => !item.locationSlugs?.length || item.locationSlugs.includes(selectedId)),
+    }));
+  const availableFoodCategories = categoriesForLocation(foodCategories);
+  const availableDrinkCategories = categoriesForLocation(drinkCategories);
+  const availableHappyHourCategories = categoriesForLocation(happyHourCategories);
   const menuCards = [
     { title:homePage.menuCard1Title,eyebrow:homePage.menuCard1Eyebrow,image:homePage.menuCard1ImageUrl },
     { title:homePage.menuCard2Title,eyebrow:homePage.menuCard2Eyebrow,image:homePage.menuCard2ImageUrl },
@@ -439,6 +446,14 @@ export default function HomeClient({ initialLocation, playIntro }: { initialLoca
                 price: String(item.price),
                 description: item.description ? String(item.description) : undefined,
                 tags: Array.isArray(item.tags) ? item.tags.map(String) : undefined,
+                allergens: Array.isArray(item.allergens) ? item.allergens.map((allergen: Record<string, unknown>) => ({
+                  name: String(allergen.name),
+                  slug: String(allergen.slug),
+                  shortLabel: allergen.shortLabel ? String(allergen.shortLabel) : undefined,
+                })) : undefined,
+                locationSlugs: Array.isArray(item.locations)
+                  ? item.locations.map((location: Record<string, unknown>) => String(location.slug))
+                  : undefined,
               })) : [],
             }));
           const cmsFood = normalizeCategories("food");
@@ -623,7 +638,10 @@ export default function HomeClient({ initialLocation, playIntro }: { initialLoca
               {category.items.map((item) => <article className="menu-item" key={item.name}>
                 <div className="menu-item-title"><h4>{item.name}</h4><span>{item.price}</span></div>
                 {item.description && <p>{item.description}</p>}
-                {item.tags && <div className="menu-tags">{item.tags.map((tag) => <small key={tag}>{tag}</small>)}</div>}
+                {Boolean(item.tags?.length || item.allergens?.length) && <div className="menu-item-meta">
+                  {item.tags?.length ? <div className="menu-tags">{item.tags.map((tag) => <small key={tag}>{tag}</small>)}</div> : null}
+                  <AllergenIcons allergens={item.allergens} />
+                </div>}
               </article>)}
             </div>
           </div>
@@ -640,7 +658,7 @@ export default function HomeClient({ initialLocation, playIntro }: { initialLoca
           <div className="menu-panel" role="tabpanel" key={category.name}>
             <div className="menu-panel-title"><span>乾杯</span><div><h3>{category.name}</h3>{category.note && <p>{category.note}</p>}</div></div>
             <div className="menu-items">
-              {category.items.map((item) => <article className="menu-item" key={item.name}><div className="menu-item-title"><h4>{item.name}</h4><span>{item.price}</span></div>{item.description && <p>{item.description}</p>}</article>)}
+              {category.items.map((item) => <article className="menu-item" key={item.name}><div className="menu-item-title"><h4>{item.name}</h4><span>{item.price}</span></div>{item.description && <p>{item.description}</p>}<AllergenIcons allergens={item.allergens} /></article>)}
             </div>
           </div>
         ))}
@@ -662,7 +680,7 @@ export default function HomeClient({ initialLocation, playIntro }: { initialLoca
               {availableHappyHourCategories.filter((category) => category.name === activeHappyHourCategory).map((category) => (
                 <div className="menu-panel" role="tabpanel" key={category.name}>
                   <div className="menu-panel-title"><span>乾杯</span><div><h3>{category.name}</h3>{category.note && <p>{category.note}</p>}</div></div>
-                  <div className="menu-items">{category.items.map((item) => <article className="menu-item" key={item.name}><div className="menu-item-title"><h4>{item.name}</h4><span>{item.price}</span></div>{item.description && <p>{item.description}</p>}{item.tags && <div className="menu-tags">{item.tags.map((tag) => <small key={tag}>{tag}</small>)}</div>}</article>)}</div>
+                  <div className="menu-items">{category.items.map((item) => <article className="menu-item" key={item.name}><div className="menu-item-title"><h4>{item.name}</h4><span>{item.price}</span></div>{item.description && <p>{item.description}</p>}{Boolean(item.tags?.length || item.allergens?.length) && <div className="menu-item-meta">{item.tags?.length ? <div className="menu-tags">{item.tags.map((tag) => <small key={tag}>{tag}</small>)}</div> : null}<AllergenIcons allergens={item.allergens} /></div>}</article>)}</div>
                 </div>
               ))}
             </> : <div className="menu-empty"><small>{selectedLocation.name.toUpperCase()}</small><p>Happy hour details for this restaurant are coming soon.</p></div>}
