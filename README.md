@@ -313,8 +313,10 @@ Add:
 ```env
 STRAPI_URL=http://localhost:1337
 STRAPI_PREVIEW_SECRET=YOUR_PREVIEW_SECRET
-HIRING_WEBHOOK_URL=https://example.com/your-hiring-workflow
-INQUIRY_WEBHOOK_URL=https://example.com/your-inquiry-workflow
+NEXT_PUBLIC_SITE_URL=https://www.kitchenmasterbistro.com
+RESEND_API_KEY=re_your_full_access_api_key
+EMAIL_FROM=Kitchen Master Website <website@updates.kitchenmasterbistro.com>
+INSIDERS_SEGMENT_ID=your_resend_segment_id
 ```
 
 Replace:
@@ -335,10 +337,42 @@ under:
 PREVIEW_SECRET=
 ```
 
-`HIRING_WEBHOOK_URL` must accept a multipart form submission and send the
-application to the supplied `hiringEmail`. The website resolves that address
-from the selected location in Strapi and adds these trusted fields to the
-webhook payload: `location`, `locationName`, `hiringEmail`, and `source`.
+The Resend sending domain in `EMAIL_FROM` must be verified. With Resend
+configured, contact, private-dining, franchise, and career forms are delivered
+directly to their Strapi-managed recipients. Career messages include the
+uploaded résumé, and every form email sets the visitor as the reply-to address.
+Create a Resend Segment for Kitchen Master Insiders and place its ID in
+`INSIDERS_SEGMENT_ID`; new popup signups are added to that segment and receive
+the one-time welcome email after `EMAIL_FROM` is configured. Contact collection
+does not depend on the sending domain, so the Insiders list can grow while DNS
+verification is pending. Use Resend Broadcasts to compose, preview, schedule,
+and measure campaigns sent to that segment.
+
+For location-targeted campaigns, create one Segment per restaurant and add a
+single-line JSON map such as:
+
+```env
+INSIDERS_LOCATION_SEGMENTS={"suwanee":"segment-id","frisco":"segment-id"}
+```
+
+The repository includes a branded first campaign at
+`emails/insiders-launch.html`. Once the Resend variables are configured, create
+a reviewable draft in Resend with:
+
+```bash
+npm run email:campaign:draft
+```
+
+This command only creates a draft. Review the recipient Segment, links,
+rendering, and test delivery in Resend before scheduling or sending it. The
+template includes Resend's managed unsubscribe link.
+
+`HIRING_WEBHOOK_URL`, `INQUIRY_WEBHOOK_URL`, and `INSIDERS_WEBHOOK_URL` remain
+supported as fallbacks when Resend is not configured. `HIRING_WEBHOOK_URL` must
+accept a multipart form submission and send the application to the supplied
+`hiringEmail`. The website resolves that address from the selected location in
+Strapi and adds these trusted fields to the webhook payload: `location`,
+`locationName`, `hiringEmail`, and `source`.
 
 To configure a restaurant, open **Content Manager → Location** in Strapi and
 set **Hiring Email**. You can also set **Hiring Roles** to a JSON array such as
