@@ -1,6 +1,6 @@
 import type { Core } from '@strapi/strapi';
 import { DRINK_CATEGORIES, MENU_CATEGORIES } from './seed/menuData';
-import { statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const locations = [
@@ -78,6 +78,7 @@ export default {
       const existing = await strapi.db.query('plugin::upload.file').findOne({ where: { name: fileName } });
       if (existing) return existing.id;
       const path = resolve(process.cwd(), '..', 'public', 'images', fileName);
+      if (!existsSync(path)) return null;
       const type = fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') ? 'image/jpeg' : 'image/png';
       const uploaded = await strapi.plugin('upload').service('upload').upload({
         data: {}, files: { filepath: path, originalFilename: fileName, mimetype: type, size: statSync(path).size },
