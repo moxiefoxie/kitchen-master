@@ -2,11 +2,6 @@
 
 # dependencies
 /node_modules
-/cms/node_modules
-/cms/.cache
-/cms/.tmp
-/cms/build
-/cms/dist
 /.pnp
 .pnp.*
 .yarn/*
@@ -14,6 +9,9 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+
+# The Strapi CMS is maintained in its own Git repository.
+/cms/
 
 # testing
 /coverage
@@ -36,7 +34,6 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !/.env.example
-!/cms/.env.example
 
 # vercel
 .vercel
