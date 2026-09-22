@@ -79,6 +79,10 @@ export async function POST(request: Request) {
   let locationName = "";
 
   if (inquiryType === "franchise") {
+    if (!location || typeof location.name !== "string" || typeof location.slug !== "string") {
+      return NextResponse.json({ error:"Please choose a valid restaurant location." }, { status:400 });
+    }
+    locationName = location.name;
     recipient = email(content.settings?.franchiseEmail) ?? email(content.settings?.contactEmail);
   } else {
     if (!location || typeof location.name !== "string" || typeof location.slug !== "string") {

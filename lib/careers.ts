@@ -19,11 +19,16 @@ export type CareersLocation = {
   reservationUrl?: string;
   hiringEmail?: string;
   hiringRoles: string[];
+  availableLocations: Array<{ name: string; slug: string; comingSoon: boolean }>;
   careerPage?: {
     heroEyebrow?: string;
     heroTitle?: string;
     heroAccent?: string;
     heroDescription?: string;
+    formEyebrow?: string;
+    formTitle?: string;
+    formDescription?: string;
+    submitLabel?: string;
   };
 };
 
@@ -35,6 +40,7 @@ type CmsLocation = {
   reservationUrl?: unknown;
   hiringEmail?: unknown;
   hiringRoles?: unknown;
+  locationStatus?: unknown;
 };
 
 type CmsCareerPage = {
@@ -45,6 +51,7 @@ type CmsCareerPage = {
   heroTitle?: unknown;
   heroAccent?: unknown;
   heroDescription?: unknown;
+  formConfig?: unknown;
 };
 
 function hiringRoles(value: unknown): string[] {
@@ -84,6 +91,12 @@ export async function getCareersLocation(slug: string, fresh = false): Promise<C
     const value = careerPage?.[key] ?? globalPage?.[key];
     return typeof value === "string" && value.trim() ? value : undefined;
   };
+  const formConfig = careerPage?.formConfig && typeof careerPage.formConfig === "object" && !Array.isArray(careerPage.formConfig)
+    ? careerPage.formConfig as Record<string, unknown>
+    : {};
+  const formValue = (key: string) => typeof formConfig[key] === "string" && String(formConfig[key]).trim()
+    ? String(formConfig[key])
+    : undefined;
 
   return {
     name: location.name,
@@ -93,11 +106,18 @@ export async function getCareersLocation(slug: string, fresh = false): Promise<C
     reservationUrl: typeof location.reservationUrl === "string" ? location.reservationUrl : undefined,
     hiringEmail: /^\S+@\S+\.\S+$/.test(configuredEmail) ? configuredEmail : undefined,
     hiringRoles: hiringRoles(location.hiringRoles),
+    availableLocations: (payload.locations ?? []).flatMap((entry) => typeof entry.name === "string" && typeof entry.slug === "string"
+      ? [{ name:entry.name, slug:entry.slug, comingSoon:entry.locationStatus === "coming-soon" }]
+      : []),
     careerPage: careerPage ? {
       heroEyebrow: pageValue("heroEyebrow"),
       heroTitle: pageValue("heroTitle"),
       heroAccent: pageValue("heroAccent"),
       heroDescription: pageValue("heroDescription"),
+      formEyebrow: formValue("formEyebrow"),
+      formTitle: formValue("formTitle"),
+      formDescription: formValue("formDescription"),
+      submitLabel: formValue("submitLabel"),
     } : undefined,
   };
 }

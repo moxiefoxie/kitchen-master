@@ -48,7 +48,7 @@ const DEFAULT_HOME: HomePageContent = {
   menuCard1Eyebrow:"The signature",menuCard1Title:"Soup Dumplings",menuCard1ImageUrl:"/images/soup-dumplings.png",menuCard2Eyebrow:"From the wok",menuCard2Title:"Modern Plates",menuCard2ImageUrl:"/images/lamb-chop.png",menuCard3Eyebrow:"Made to share",menuCard3Title:"Small Plates",menuCard3ImageUrl:"/images/szechuan-wonton.png",
   foodMenuTitle:"The full menu.",foodMenuDescription:"Handcrafted daily. Menu availability and pricing may change. Please tell your server about any allergies before ordering.",foodMenuDisclaimer:"V · Vegetarian|Raw · May be served raw or undercooked|Parties of six or more are subject to 20% gratuity",
   drinkEyebrow:"From the bar",drinkTitle:"Pour something",drinkAccent:"memorable.",drinkDescription:"House cocktails inspired by Asian flavors, a considered wine and sake list, and thoughtful zero-proof drinks.",drinkDisclaimer:"Must be 21+ with valid identification|Selections and vintages may change|Please enjoy responsibly",
-  happyHourEyebrow:"A little earlier",happyHourTitle:"Happy hour.",happyHourAccent:"Well spent.",happyHourDescription:"Selected bites and pours at participating Kitchen Master restaurants. Times and availability vary by location.",happyHourDisclaimer:"Dine-in only|Participation, days, and times vary by location|Must be 21+ for alcoholic beverages",
+  happyHourEyebrow:"A little earlier",happyHourTitle:"Happy hour.",happyHourAccent:"Well spent.",happyHourDescription:"Monday–Friday · 3–5 PM. A short list of favorite bites and pours for {{location}}.",happyHourDisclaimer:"Dine-in only|Happy hour menu and hours are set by location|Must be 21+ for alcoholic beverages",
   featureEyebrow:"Dinner, done differently",featureTitle:"A table worth",featureAccent:"gathering around.",featureBody:"From a quick dinner to a long celebration, every meal is made to be shared.",featureImageUrl:"/images/spread.jpg",
   privateDiningEyebrow:"Private dining",privateDiningTitle:"Your occasion.",privateDiningAccent:"Our craft.",privateDiningBody:"Host an intimate dinner or a full celebration in a space designed for memorable meals. Our team will help shape the room and menu around your event.",privateDiningImageUrl:"/images/private-room.png",privateDiningCaption:"Private rooms · Custom menus · Personal service",
   socialEyebrow:"From our guests",socialTitle:"Loved locally.",socialAccent:"Shared often.",socialBody:"See what guests are saying about Kitchen Master {{location}}, then follow along for new dishes and behind-the-scenes moments.",
@@ -69,6 +69,7 @@ function resolveHomepageSections(base: HomePageContent, sections: HomepageSectio
 
   return {
     ...base,
+    heroImageUrl:image(gateway,base.heroImageUrl),
     gatewayEyebrow:value(gateway,"eyebrow",base.gatewayEyebrow),gatewayTitle:value(gateway,"title",base.gatewayTitle),gatewayAccent:value(gateway,"accent",base.gatewayAccent),gatewayDescription:value(gateway,"body",base.gatewayDescription),
     reservationEyebrow:value(reservations,"eyebrow",base.reservationEyebrow),reservationTitle:value(reservations,"title",base.reservationTitle),reservationAccent:value(reservations,"accent",base.reservationAccent),reservationDescription:value(reservations,"body",base.reservationDescription),
     storyEyebrow:value(story,"eyebrow",base.storyEyebrow),storyTitle:value(story,"title",base.storyTitle),storyAccent:value(story,"accent",base.storyAccent),storyBody:value(story,"body",base.storyBody),storyImageUrl:image(story,base.storyImageUrl),
@@ -659,19 +660,24 @@ export default function Home() {
       </section>
 
       <section className="full-menu happy-hour-menu" id="happy-hour">
-        <div className="full-menu-head"><div><p className="kicker">{homePage.happyHourEyebrow}</p><h2>{homePage.happyHourTitle}<br /><em>{homePage.happyHourAccent}</em></h2></div><p>{homePage.happyHourDescription}</p></div>
-        {availableHappyHourCategories.length > 0 ? <>
-          <div className="menu-tabs" role="tablist" aria-label="Happy hour categories">
-            {availableHappyHourCategories.map((category) => <button role="tab" aria-selected={activeHappyHourCategory === category.name} className={activeHappyHourCategory === category.name ? "active" : ""} onClick={() => setActiveHappyHourCategory(category.name)} key={category.name}>{category.name}</button>)}
+        <div className="happy-hour-grid">
+          <div className="happy-hour-heading"><p className="kicker">{homePage.happyHourEyebrow}</p><h2>{homePage.happyHourTitle}<br /><em>{homePage.happyHourAccent}</em></h2></div>
+          <div className="happy-hour-content">
+            <div className="happy-hour-summary"><small>{selectedLocation.name.toUpperCase()}</small><p>{homePage.happyHourDescription.replaceAll("{{location}}", selectedLocation.name)}</p></div>
+            {availableHappyHourCategories.length > 0 ? <>
+              <div className="menu-tabs" role="tablist" aria-label="Happy hour categories">
+                {availableHappyHourCategories.map((category) => <button role="tab" aria-selected={activeHappyHourCategory === category.name} className={activeHappyHourCategory === category.name ? "active" : ""} onClick={() => setActiveHappyHourCategory(category.name)} key={category.name}>{category.name}</button>)}
+              </div>
+              {availableHappyHourCategories.filter((category) => category.name === activeHappyHourCategory).map((category) => (
+                <div className="menu-panel" role="tabpanel" key={category.name}>
+                  <div className="menu-panel-title"><span>乾杯</span><div><h3>{category.name}</h3>{category.note && <p>{category.note}</p>}</div></div>
+                  <div className="menu-items">{category.items.map((item) => <article className="menu-item" key={item.name}><div className="menu-item-title"><h4>{item.name}</h4><span>{item.price}</span></div>{item.description && <p>{item.description}</p>}{item.tags && <div className="menu-tags">{item.tags.map((tag) => <small key={tag}>{tag}</small>)}</div>}</article>)}</div>
+                </div>
+              ))}
+            </> : <div className="menu-empty"><small>{selectedLocation.name.toUpperCase()}</small><p>Happy hour details for this restaurant are coming soon.</p></div>}
+            <div className="menu-disclaimer">{homePage.happyHourDisclaimer.split("|").map((item)=><span key={item}>{item}</span>)}</div>
           </div>
-          {availableHappyHourCategories.filter((category) => category.name === activeHappyHourCategory).map((category) => (
-            <div className="menu-panel" role="tabpanel" key={category.name}>
-              <div className="menu-panel-title"><span>乾杯</span><div><h3>{category.name}</h3>{category.note && <p>{category.note}</p>}</div></div>
-              <div className="menu-items">{category.items.map((item) => <article className="menu-item" key={item.name}><div className="menu-item-title"><h4>{item.name}</h4><span>{item.price}</span></div>{item.description && <p>{item.description}</p>}{item.tags && <div className="menu-tags">{item.tags.map((tag) => <small key={tag}>{tag}</small>)}</div>}</article>)}</div>
-            </div>
-          ))}
-        </> : <div className="menu-empty"><small>{selectedLocation.name.toUpperCase()}</small><p>Happy hour details for this restaurant are coming soon.</p></div>}
-        <div className="menu-disclaimer">{homePage.happyHourDisclaimer.split("|").map((item)=><span key={item}>{item}</span>)}</div>
+        </div>
       </section>
 
       <section className="feature">

@@ -27,7 +27,7 @@ type SitePage = {
   documentId?: string;
   title: string;
   slug: string;
-  pageType?: "home" | "story" | "private-dining" | "contact" | "careers" | "franchise" | "happenings" | "custom";
+  pageType?: "home" | "story" | "private-dining" | "contact" | "careers" | "franchise" | "happenings" | "specials" | "custom";
   location?: { slug?: string } | null;
   heroEyebrow?: string;
   heroTitle?: string;
@@ -120,6 +120,10 @@ const FALLBACK_PAGES: Record<string, SitePage> = {
     title:"Happenings",slug:"happenings",pageType:"happenings",heroEyebrow:"Specials · Events",heroTitle:"What’s happening",heroAccent:"at Kitchen Master.",
     heroDescription:"Seasonal specials, happy hour notes, and gatherings worth putting on your calendar.",
   },
+  specials: {
+    title:"Specials",slug:"specials",pageType:"specials",heroEyebrow:"Happenings · Specials",heroTitle:"From the kitchen",heroAccent:"right now.",
+    heroDescription:"Limited dishes and seasonal ideas from your selected Kitchen Master.",
+  },
 };
 
 async function getContent(preview = false, fresh = false): Promise<PublicContent> {
@@ -136,7 +140,7 @@ async function getContent(preview = false, fresh = false): Promise<PublicContent
 
 function resolvePage(content: PublicContent, slug: string, locationSlug?: string) {
   const fallback = FALLBACK_PAGES[slug];
-  const pageType = slug === "private-dining" || slug === "contact" || slug === "franchise" || slug === "happenings" ? slug : null;
+  const pageType = slug === "private-dining" || slug === "contact" || slug === "franchise" || slug === "happenings" || slug === "specials" ? slug : null;
   const candidates = content.pages?.filter((page) => (pageType && page.pageType === pageType) || page.slug === slug || page.documentId === slug) ?? [];
   const globalPage = candidates.find((page) => !page.location);
   const locationPage = locationSlug ? candidates.find((page) => page.location?.slug === locationSlug) : undefined;
@@ -169,8 +173,8 @@ function happeningImageUrl(item: Happening) {
   return url.startsWith("/") ? `${cmsUrl}${url}` : url;
 }
 
-function locationField(locations: Location[], selected: Location) {
-  return <label>Restaurant<select name="location" defaultValue={selected.slug} required>{locations.map((location) => <option value={location.slug} key={location.slug}>{location.name}{location.locationStatus === "coming-soon" ? " — Coming soon" : ""}</option>)}</select></label>;
+function locationField(locations: Location[], selected: Location, label = "Restaurant") {
+  return <label>{label}<select name="location" defaultValue={selected.slug} required>{locations.map((location) => <option value={location.slug} key={location.slug}>{location.name}{location.locationStatus === "coming-soon" ? " — Coming soon" : ""}</option>)}</select></label>;
 }
 
 function ContactForm({ locations, selected, config }: { locations: Location[]; selected: Location; config: FormConfig }) {
@@ -203,15 +207,15 @@ function PrivateDiningForm({ locations, selected, config }: { locations: Locatio
   </form>;
 }
 
-function FranchiseForm({ locationSlug, config }: { locationSlug: string; config: FormConfig }) {
+function FranchiseForm({ locations, selected, config }: { locations: Location[]; selected: Location; config: FormConfig }) {
   const experienceOptions = config.experienceOptions?.length ? config.experienceOptions : ["Restaurant owner or operator", "Multi-unit operator", "Hospitality management", "Business ownership outside hospitality", "New to ownership"];
   const investmentOptions = config.investmentRangeOptions?.length ? config.investmentRangeOptions : ["Under $500,000", "$500,000–$1 million", "$1–$2 million", "$2 million+"];
   return <form className="inquiry-form" action="/api/inquiry" method="post">
     <input type="hidden" name="inquiryType" value="franchise" />
-    <input type="hidden" name="location" value={locationSlug} />
     <label>Full name<input name="name" autoComplete="name" required /></label>
     <label>Email<input name="email" type="email" autoComplete="email" required /></label>
     <label>Phone<input name="phone" type="tel" autoComplete="tel" required /></label>
+    {locationField(locations, selected, "Preferred Kitchen Master")}
     <label>Target city and state<input name="targetMarket" required /></label>
     <label>Hospitality experience<select name="experience" required defaultValue=""><option value="" disabled>Select one</option>{experienceOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
     <label>Expected investment range<select name="investmentRange" required defaultValue=""><option value="" disabled>Select one</option>{investmentOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
@@ -242,6 +246,7 @@ export default async function CmsPage({ params, searchParams }: { params:Promise
   const background = imageUrl(page);
   const isInquiryPage = slug === "contact" || slug === "private-dining" || slug === "franchise";
   const isHappeningsPage = slug === "happenings";
+  const isSpecialsPage = slug === "specials";
   const formConfig = page.formConfig ?? {};
   const locationCopy = (value: string) => value.replaceAll("{{location}}", selected.name);
   const now = Date.now();
@@ -250,29 +255,39 @@ export default async function CmsPage({ params, searchParams }: { params:Promise
     .filter((item) => !item.endsAt || new Date(item.endsAt).getTime() >= now)
     .filter((item) => !item.locations?.length || item.locations.some((location) => location.slug === selected.slug))
     .sort((a, b) => Number(b.featured) - Number(a.featured) || Number(b.priority ?? 0) - Number(a.priority ?? 0) || new Date(a.startsAt ?? 0).getTime() - new Date(b.startsAt ?? 0).getTime());
+  const events = happenings.filter((item) => item.happeningType !== "special");
+  const specials = happenings.filter((item) => item.happeningType === "special");
 
-  return <main className={`cms-page interior-page${isInquiryPage ? " inquiry-page" : ""}${isHappeningsPage ? " happenings-page" : ""}`} style={background ? { backgroundImage:`linear-gradient(90deg,#11100ff2,#11100f88),url(${background})` } : undefined}>
+  return <main className={`cms-page interior-page${isInquiryPage ? " inquiry-page" : ""}${isHappeningsPage || isSpecialsPage ? " happenings-page" : ""}${isSpecialsPage ? " specials-page" : ""}`} style={background ? { backgroundImage:`linear-gradient(90deg,#11100ff2,#11100f88),url(${background})` } : undefined}>
     <SiteHeader location={selected} />
-    <section className={`cms-page-hero${isInquiryPage ? " inquiry-hero" : ""}`}>
-      <p className="kicker">{page.heroEyebrow || page.title}{(slug === "contact" || slug === "private-dining") && ` · ${selected.name}`}</p>
-      <h1>{page.heroTitle || page.title}<br/><em>{page.heroAccent}</em></h1>
-      {page.heroDescription && <p>{page.heroDescription}</p>}
-    </section>
-
-    {isHappeningsPage ? <HappeningsCalendar locationName={selected.name} items={happenings.map((item) => ({
-      id:item.documentId || item.slug,slug:item.slug,title:item.title,type:item.happeningType === "special" ? "special" : "event",eyebrow:item.eyebrow,summary:item.summary,details:item.details,
-      startsAt:item.startsAt,endsAt:item.endsAt,schedule:item.schedule,buttonLabel:item.buttonLabel,buttonUrl:item.buttonUrl,imageUrl:happeningImageUrl(item),
-    }))} /> : isInquiryPage ? <section className="inquiry-layout">
-      <div className="inquiry-copy">
-        {page.sections?.slice(0, 1).map((section, index) => <article className="cms-content-block" key={index}>{section.eyebrow && <small>{section.eyebrow}</small>}{section.heading && <h2>{section.heading}</h2>}{section.body && <p>{section.body}</p>}</article>)}
+    {isInquiryPage ? <section className="form-page-layout">
+      <div className="form-page-copy">
+        <p className="kicker">{page.heroEyebrow || page.title}{(slug === "contact" || slug === "private-dining") && ` · ${selected.name}`}</p>
+        <h1>{page.heroTitle || page.title}<br/><em>{page.heroAccent}</em></h1>
+        {page.heroDescription && <p className="form-page-description">{page.heroDescription}</p>}
         {(slug === "contact" || slug === "private-dining") && <aside className="page-location-card"><small>YOUR SELECTED RESTAURANT</small><h3>{selected.name}</h3><p>{selected.address}<br/>{selected.city}</p>{selected.phone && <a href={`tel:${selected.phone.replace(/[^\d+]/g, "")}`}>{selected.phone}</a>}{selected.hours && <p>{selected.hours}</p>}</aside>}
       </div>
       <div className="inquiry-panel">
         {query.submitted === "1" ? <section className="inquiry-success"><small>MESSAGE RECEIVED</small><h2>Thank you.</h2><p>{slug === "franchise" ? "Our development team will review your information and follow up when there may be a fit." : `Your message has been sent to the ${selected.name} team.`}</p></section> : <>
           <div className="inquiry-form-intro"><small>{formConfig.formEyebrow || (slug === "contact" ? "SEND A NOTE" : slug === "private-dining" ? "EVENT INQUIRY" : "FRANCHISE INQUIRY")}</small><h2>{formConfig.formTitle ? locationCopy(formConfig.formTitle) : slug === "contact" ? `Contact ${selected.name}.` : slug === "private-dining" ? `Plan with ${selected.name}.` : "Introduce yourself."}</h2><p>{formConfig.formDescription || "Required fields help us route your message to the right team."}</p></div>
-          {slug === "contact" ? <ContactForm locations={locations} selected={selected} config={formConfig} /> : slug === "private-dining" ? <PrivateDiningForm locations={locations} selected={selected} config={formConfig} /> : <FranchiseForm locationSlug={selected.slug} config={formConfig} />}
+          {slug === "contact" ? <ContactForm locations={locations} selected={selected} config={formConfig} /> : slug === "private-dining" ? <PrivateDiningForm locations={locations} selected={selected} config={formConfig} /> : <FranchiseForm locations={locations} selected={selected} config={formConfig} />}
         </>}
       </div>
+    </section> : <>
+      <section className="cms-page-hero">
+        <p className="kicker">{page.heroEyebrow || page.title}</p>
+        <h1>{page.heroTitle || page.title}<br/><em>{page.heroAccent}</em></h1>
+        {page.heroDescription && <p>{page.heroDescription}</p>}
+      </section>
+      {isHappeningsPage ? <HappeningsCalendar locationName={selected.name} items={events.map((item) => ({
+      id:item.documentId || item.slug,slug:item.slug,title:item.title,type:item.happeningType === "special" ? "special" : "event",eyebrow:item.eyebrow,summary:item.summary,details:item.details,
+      startsAt:item.startsAt,endsAt:item.endsAt,schedule:item.schedule,buttonLabel:item.buttonLabel,buttonUrl:item.buttonUrl,imageUrl:happeningImageUrl(item),
+    }))} /> : isSpecialsPage ? <section className="specials-list" aria-label={`Current specials at Kitchen Master ${selected.name}`}>
+      {specials.length ? specials.map((item) => <article className={happeningImageUrl(item) ? undefined : "special-card-no-image"} id={`special-${item.slug}`} key={item.documentId || item.slug}>
+        {happeningImageUrl(item) && <img src={happeningImageUrl(item) as string} alt="" />}
+        <div><div className="special-meta"><span>{item.eyebrow || "Weekly special"}</span><span>{item.schedule || "Available now"}</span></div><h2>{item.title}</h2>{item.summary && <p>{item.summary}</p>}{item.details && <p className="special-details">{item.details}</p>}{item.buttonUrl && <a className="under-link" href={item.buttonUrl}>{item.buttonLabel || "Learn more"} <span>→</span></a>}</div>
+      </article>) : <div className="calendar-empty"><strong>No specials are posted yet.</strong><span>New dishes for {selected.name} will appear here.</span></div>}
     </section> : page.sections?.map((section, index) => <section className="cms-content-block" key={index}>{section.eyebrow && <small>{section.eyebrow}</small>}{section.heading && <h2>{section.heading}</h2>}{section.body && <p>{section.body}</p>}{section.linkUrl && <a className="button button-red" href={section.linkUrl}>{section.linkLabel || "Learn more"} →</a>}</section>)}
+    </>}
   </main>;
 }
