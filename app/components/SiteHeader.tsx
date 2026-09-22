@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import AnnouncementBanner, { type AnnouncementHappening } from "./AnnouncementBanner";
 import HeaderNav from "./HeaderNav";
+import { contentAppliesToLocation } from "../restaurantScope";
 
 type HeaderLocation = {
   name: string;
@@ -25,7 +26,11 @@ export default function SiteHeader({ location }: { location: HeaderLocation }) {
         const match = (Array.isArray(payload.happenings) ? payload.happenings : [])
           .filter((item: Record<string, unknown>) => item.enabled !== false && item.showInBanner === true)
           .filter((item: Record<string, unknown>) => !item.endsAt || new Date(String(item.endsAt)).getTime() >= now)
-          .filter((item: Record<string, unknown>) => !Array.isArray(item.locations) || item.locations.length === 0 || item.locations.some((assigned: Record<string, unknown>) => assigned.slug === location.slug))
+          .filter((item: Record<string, unknown>) => contentAppliesToLocation(
+            item.restaurantScope ? String(item.restaurantScope) : undefined,
+            Array.isArray(item.locations) ? item.locations.map((assigned: Record<string, unknown>) => String(assigned.slug)) : undefined,
+            location.slug,
+          ))
           .sort((a: Record<string, unknown>, b: Record<string, unknown>) => Number(b.priority ?? 0) - Number(a.priority ?? 0))[0];
         setAnnouncement(match ? {
           slug: String(match.slug), title: String(match.title), eyebrow: match.eyebrow ? String(match.eyebrow) : undefined,

@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { DRINK_CATEGORIES, HAPPY_HOUR_CATEGORIES, MENU_CATEGORIES } from "./menuData";
 import AnnouncementBanner, { type AnnouncementHappening } from "./components/AnnouncementBanner";
-import AllergenIcons from "./components/AllergenIcons";
+import AllergenIcons, { AllergenLegend } from "./components/AllergenIcons";
 import HeaderNav from "./components/HeaderNav";
 import ResyEmbed from "./components/ResyEmbed";
+import { contentAppliesToLocation } from "./restaurantScope";
 
 type SiteSettings = {
   heroEyebrow: string;
@@ -38,6 +39,7 @@ type HomePageContent = {
 
 type HomepageSection = Record<string, unknown> & {
   sectionKey?: string;
+  restaurantScope?: string;
   location?: { slug?: string } | null;
 };
 
@@ -58,7 +60,9 @@ const DEFAULT_HOME: HomePageContent = {
 };
 
 function resolveHomepageSections(base: HomePageContent, sections: HomepageSection[], locationSlug: string) {
-  const section = (key: string) => sections.find((item) => item.sectionKey === key && item.location?.slug === locationSlug)
+  const section = (key: string) => sections.find((item) => item.sectionKey === key && item.restaurantScope === locationSlug)
+    ?? sections.find((item) => item.sectionKey === key && item.location?.slug === locationSlug)
+    ?? sections.find((item) => item.sectionKey === key && item.restaurantScope === "all")
     ?? sections.find((item) => item.sectionKey === key && !item.location);
   const value = (item: HomepageSection | undefined, key: string, fallback: string) => item?.[key] ? String(item[key]) : fallback;
   const image = (item: HomepageSection | undefined, fallback?: string) => item?.image && typeof item.image === "object" && "url" in item.image
@@ -137,6 +141,7 @@ type Campaign = {
   startsAt?: string;
   endsAt?: string;
   priority: number;
+  restaurantScope?: string;
   locations?: Array<{ slug: string }>;
   eyebrow?: string;
   title: string;
@@ -155,6 +160,7 @@ type Happening = AnnouncementHappening & {
   priority?: number;
   startsAt?: string;
   endsAt?: string;
+  restaurantScope?: string;
   locations?: Array<{ slug: string }>;
 };
 
@@ -255,18 +261,18 @@ export default function HomeClient({ initialLocation, playIntro }: { initialLoca
     .filter((campaign) => campaign.enabled)
     .filter((campaign) => !campaign.startsAt || new Date(campaign.startsAt).getTime() <= now)
     .filter((campaign) => !campaign.endsAt || new Date(campaign.endsAt).getTime() >= now)
-    .filter((campaign) => !campaign.locations?.length || campaign.locations.some((location) => location.slug === selectedId))
+    .filter((campaign) => contentAppliesToLocation(campaign.restaurantScope, campaign.locations?.map((location) => location.slug), selectedId))
     .sort((a, b) => b.priority - a.priority)[0];
   const activeAnnouncement = happenings
     .filter((item) => item.enabled !== false && item.showInBanner)
     .filter((item) => !item.endsAt || new Date(item.endsAt).getTime() >= now)
-    .filter((item) => !item.locations?.length || item.locations.some((location) => location.slug === selectedId))
+    .filter((item) => contentAppliesToLocation(item.restaurantScope, item.locations?.map((location) => location.slug), selectedId))
     .sort((a, b) => Number(b.priority ?? 0) - Number(a.priority ?? 0))[0];
   const categoriesForLocation = (categories: typeof foodCategories) => categories
-    .filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId))
+    .filter((category) => contentAppliesToLocation(category.restaurantScope, category.locationSlugs, selectedId))
     .map((category) => ({
       ...category,
-      items: category.items.filter((item) => !item.locationSlugs?.length || item.locationSlugs.includes(selectedId)),
+      items: category.items.filter((item) => contentAppliesToLocation(item.restaurantScope, item.locationSlugs, selectedId)),
     }));
   const availableFoodCategories = categoriesForLocation(foodCategories);
   const availableDrinkCategories = categoriesForLocation(drinkCategories);
@@ -438,6 +444,7 @@ export default function HomeClient({ initialLocation, playIntro }: { initialLoca
             .map((category: Record<string, unknown>) => ({
               name: String(category.name),
               note: category.note ? String(category.note) : undefined,
+              restaurantScope: category.restaurantScope ? String(category.restaurantScope) : undefined,
               locationSlugs: Array.isArray(category.locations)
                 ? category.locations.map((location: Record<string, unknown>) => String(location.slug))
                 : undefined,
@@ -451,6 +458,7 @@ export default function HomeClient({ initialLocation, playIntro }: { initialLoca
                   slug: String(allergen.slug),
                   shortLabel: allergen.shortLabel ? String(allergen.shortLabel) : undefined,
                 })) : undefined,
+                restaurantScope: item.restaurantScope ? String(item.restaurantScope) : undefined,
                 locationSlugs: Array.isArray(item.locations)
                   ? item.locations.map((location: Record<string, unknown>) => String(location.slug))
                   : undefined,
@@ -477,6 +485,7 @@ export default function HomeClient({ initialLocation, playIntro }: { initialLoca
           setCampaigns(payload.campaigns.map((campaign: Record<string, unknown>) => ({
             name:String(campaign.name ?? "Campaign"),campaignType:campaign.campaignType === "insiders" ? "insiders" : "external-cta",enabled:campaign.enabled !== false,
             startsAt:campaign.startsAt ? String(campaign.startsAt) : undefined,endsAt:campaign.endsAt ? String(campaign.endsAt) : undefined,priority:Number(campaign.priority ?? 0),
+            restaurantScope:campaign.restaurantScope ? String(campaign.restaurantScope) : undefined,
             locations:Array.isArray(campaign.locations) ? campaign.locations.map((location: Record<string, unknown>) => ({slug:String(location.slug)})) : [],
             eyebrow:campaign.eyebrow ? String(campaign.eyebrow) : undefined,title:String(campaign.title ?? "Kitchen Master"),accent:campaign.accent ? String(campaign.accent) : undefined,
             body:campaign.body ? String(campaign.body) : undefined,buttonLabel:campaign.buttonLabel ? String(campaign.buttonLabel) : undefined,buttonUrl:campaign.buttonUrl ? String(campaign.buttonUrl) : undefined,
@@ -490,6 +499,7 @@ export default function HomeClient({ initialLocation, playIntro }: { initialLoca
             summary:item.summary ? String(item.summary) : undefined,buttonLabel:item.buttonLabel ? String(item.buttonLabel) : undefined,buttonUrl:item.buttonUrl ? String(item.buttonUrl) : undefined,
             dismissalKey:item.dismissalKey ? String(item.dismissalKey) : undefined,enabled:item.enabled !== false,showInBanner:item.showInBanner === true,priority:Number(item.priority ?? 0),
             startsAt:item.startsAt ? String(item.startsAt) : undefined,endsAt:item.endsAt ? String(item.endsAt) : undefined,
+            restaurantScope:item.restaurantScope ? String(item.restaurantScope) : undefined,
             locations:Array.isArray(item.locations) ? item.locations.map((location: Record<string, unknown>) => ({slug:String(location.slug)})) : [],
           })));
         }
@@ -646,7 +656,7 @@ export default function HomeClient({ initialLocation, playIntro }: { initialLoca
             </div>
           </div>
         ))}
-        <div className="menu-disclaimer">{homePage.foodMenuDisclaimer.split("|").map((item)=><span key={item}>{item}</span>)}</div>
+        <div className="menu-disclaimer">{homePage.foodMenuDisclaimer.split("|").map((item)=><span key={item}>{item}</span>)}<AllergenLegend /></div>
       </section>
 
       <section className="full-menu drinks-menu" id="drinks">

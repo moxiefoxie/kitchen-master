@@ -5,9 +5,10 @@ export type MenuItem = {
   description?: string;
   tags?: string[];
   allergens?: MenuAllergen[];
+  restaurantScope?: string;
   locationSlugs?: string[];
 };
-export type MenuCategory = { name: string; note?: string; items: MenuItem[]; locationSlugs?: string[] };
+export type MenuCategory = { name: string; note?: string; items: MenuItem[]; restaurantScope?: string; locationSlugs?: string[] };
 
 export const MENU_CATEGORIES: MenuCategory[] = [
   { name: "Appetizers", items: [

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import HappeningsCalendar from "@/app/components/HappeningsCalendar";
 import SiteHeader from "@/app/components/SiteHeader";
+import { contentAppliesToLocation } from "@/app/restaurantScope";
 import { STRAPI_URL as cmsUrl } from "@/lib/strapi";
 
 type ContentSection = {
@@ -28,6 +29,7 @@ type SitePage = {
   title: string;
   slug: string;
   pageType?: "home" | "story" | "private-dining" | "contact" | "careers" | "franchise" | "happenings" | "specials" | "custom";
+  restaurantScope?: string;
   location?: { slug?: string } | null;
   heroEyebrow?: string;
   heroTitle?: string;
@@ -58,6 +60,7 @@ type Happening = {
   buttonLabel?: string;
   buttonUrl?: string;
   image?: { url?: string };
+  restaurantScope?: string;
   locations?: Array<{ slug?: string }>;
   priority?: number;
 };
@@ -142,8 +145,8 @@ function resolvePage(content: PublicContent, slug: string, locationSlug?: string
   const fallback = FALLBACK_PAGES[slug];
   const pageType = slug === "private-dining" || slug === "contact" || slug === "franchise" || slug === "happenings" || slug === "specials" ? slug : null;
   const candidates = content.pages?.filter((page) => (pageType && page.pageType === pageType) || page.slug === slug || page.documentId === slug) ?? [];
-  const globalPage = candidates.find((page) => !page.location);
-  const locationPage = locationSlug ? candidates.find((page) => page.location?.slug === locationSlug) : undefined;
+  const globalPage = candidates.find((page) => page.restaurantScope === "all" || !page.location);
+  const locationPage = locationSlug ? candidates.find((page) => page.restaurantScope === locationSlug || page.location?.slug === locationSlug) : undefined;
   const directPage = candidates.find((page) => page.slug === slug || page.documentId === slug);
   const cmsPage = locationPage ?? globalPage ?? directPage;
   if (!cmsPage) return fallback ?? null;
@@ -253,7 +256,7 @@ export default async function CmsPage({ params, searchParams }: { params:Promise
   const happenings = (content.happenings ?? [])
     .filter((item) => item.enabled !== false)
     .filter((item) => !item.endsAt || new Date(item.endsAt).getTime() >= now)
-    .filter((item) => !item.locations?.length || item.locations.some((location) => location.slug === selected.slug))
+    .filter((item) => contentAppliesToLocation(item.restaurantScope, item.locations?.map((location) => String(location.slug)), selected.slug))
     .sort((a, b) => Number(b.featured) - Number(a.featured) || Number(b.priority ?? 0) - Number(a.priority ?? 0) || new Date(a.startsAt ?? 0).getTime() - new Date(b.startsAt ?? 0).getTime());
   const events = happenings.filter((item) => item.happeningType !== "special");
   const specials = happenings.filter((item) => item.happeningType === "special");
