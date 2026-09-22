@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import HappeningsCalendar from "@/app/components/HappeningsCalendar";
 import SiteHeader from "@/app/components/SiteHeader";
 import { STRAPI_URL as cmsUrl } from "@/lib/strapi";
 
@@ -168,17 +169,6 @@ function happeningImageUrl(item: Happening) {
   return url.startsWith("/") ? `${cmsUrl}${url}` : url;
 }
 
-function happeningDate(item: Happening) {
-  if (item.schedule) return item.schedule;
-  if (!item.startsAt) return item.happeningType === "special" ? "Available now" : "Ongoing";
-  const start = new Date(item.startsAt);
-  const startLabel = start.toLocaleDateString("en-US", { month:"short", day:"numeric", year:start.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined });
-  if (!item.endsAt) return startLabel;
-  const end = new Date(item.endsAt);
-  const endLabel = end.toLocaleDateString("en-US", { month:"short", day:"numeric", year:end.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined });
-  return startLabel === endLabel ? startLabel : `${startLabel} — ${endLabel}`;
-}
-
 function locationField(locations: Location[], selected: Location) {
   return <label>Restaurant<select name="location" defaultValue={selected.slug} required>{locations.map((location) => <option value={location.slug} key={location.slug}>{location.name}{location.locationStatus === "coming-soon" ? " — Coming soon" : ""}</option>)}</select></label>;
 }
@@ -261,7 +251,7 @@ export default async function CmsPage({ params, searchParams }: { params:Promise
     .filter((item) => !item.locations?.length || item.locations.some((location) => location.slug === selected.slug))
     .sort((a, b) => Number(b.featured) - Number(a.featured) || Number(b.priority ?? 0) - Number(a.priority ?? 0) || new Date(a.startsAt ?? 0).getTime() - new Date(b.startsAt ?? 0).getTime());
 
-  return <main className="cms-page interior-page" style={background ? { backgroundImage:`linear-gradient(90deg,#11100ff2,#11100f88),url(${background})` } : undefined}>
+  return <main className={`cms-page interior-page${isInquiryPage ? " inquiry-page" : ""}${isHappeningsPage ? " happenings-page" : ""}`} style={background ? { backgroundImage:`linear-gradient(90deg,#11100ff2,#11100f88),url(${background})` } : undefined}>
     <SiteHeader location={selected} />
     <section className={`cms-page-hero${isInquiryPage ? " inquiry-hero" : ""}`}>
       <p className="kicker">{page.heroEyebrow || page.title}{(slug === "contact" || slug === "private-dining") && ` · ${selected.name}`}</p>
@@ -269,26 +259,12 @@ export default async function CmsPage({ params, searchParams }: { params:Promise
       {page.heroDescription && <p>{page.heroDescription}</p>}
     </section>
 
-    {isHappeningsPage ? <section className="happenings-layout" aria-label={`Current happenings at Kitchen Master ${selected.name}`}>
-      <div className="happenings-intro"><small>NOW AT {selected.name.toUpperCase()}</small><h2>A good reason<br/>to come by.</h2><p>Only current and upcoming items for your selected restaurant appear here. Specials without a location apply across Kitchen Master.</p></div>
-      <div className="happenings-list">
-        {happenings.length ? happenings.map((item, index) => {
-          const image = happeningImageUrl(item);
-          return <article className={`happening-card${index === 0 ? " happening-card-featured" : ""}`} key={item.documentId || item.slug}>
-            {image && <div className="happening-image"><img src={image} alt="" /></div>}
-            <div className="happening-copy">
-              <div className="happening-meta"><span>{item.eyebrow || (item.happeningType === "special" ? "Special" : "Event")}</span><time>{happeningDate(item)}</time></div>
-              <h3>{item.title}</h3>
-              {item.summary && <p>{item.summary}</p>}
-              {item.details && <p className="happening-details">{item.details}</p>}
-              {item.buttonUrl && <a className="under-link" href={item.buttonUrl}>{item.buttonLabel || "Learn more"} <span>→</span></a>}
-            </div>
-          </article>;
-        }) : <div className="happenings-empty"><small>NOTHING SCHEDULED YET</small><h3>More is on the way.</h3><p>Check back soon for specials and upcoming events at {selected.name}.</p><a className="button button-red" href={`/?location=${selected.slug}#happy-hour`}>View happy hour →</a></div>}
-      </div>
-    </section> : isInquiryPage ? <section className="inquiry-layout">
+    {isHappeningsPage ? <HappeningsCalendar locationName={selected.name} items={happenings.map((item) => ({
+      id:item.documentId || item.slug,slug:item.slug,title:item.title,type:item.happeningType === "special" ? "special" : "event",eyebrow:item.eyebrow,summary:item.summary,details:item.details,
+      startsAt:item.startsAt,endsAt:item.endsAt,schedule:item.schedule,buttonLabel:item.buttonLabel,buttonUrl:item.buttonUrl,imageUrl:happeningImageUrl(item),
+    }))} /> : isInquiryPage ? <section className="inquiry-layout">
       <div className="inquiry-copy">
-        {page.sections?.map((section, index) => <article className="cms-content-block" key={index}>{section.eyebrow && <small>{section.eyebrow}</small>}{section.heading && <h2>{section.heading}</h2>}{section.body && <p>{section.body}</p>}</article>)}
+        {page.sections?.slice(0, 1).map((section, index) => <article className="cms-content-block" key={index}>{section.eyebrow && <small>{section.eyebrow}</small>}{section.heading && <h2>{section.heading}</h2>}{section.body && <p>{section.body}</p>}</article>)}
         {(slug === "contact" || slug === "private-dining") && <aside className="page-location-card"><small>YOUR SELECTED RESTAURANT</small><h3>{selected.name}</h3><p>{selected.address}<br/>{selected.city}</p>{selected.phone && <a href={`tel:${selected.phone.replace(/[^\d+]/g, "")}`}>{selected.phone}</a>}{selected.hours && <p>{selected.hours}</p>}</aside>}
       </div>
       <div className="inquiry-panel">

@@ -18,6 +18,10 @@ export default function HeaderNav({ locationSlug, hasReservations = false, isHom
     event.currentTarget.closest("details")?.removeAttribute("open");
     onNavigate?.();
   };
+  const handleParentNavigate = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.stopPropagation();
+    handleNavigate(event);
+  };
   const handleToggle = (event: SyntheticEvent<HTMLDetailsElement>) => {
     const current = event.currentTarget;
     if (!current.open) return;
@@ -28,7 +32,7 @@ export default function HeaderNav({ locationSlug, hasReservations = false, isHom
 
   return <>
     <details className="nav-dropdown" onToggle={handleToggle}>
-      <summary>Menus <span aria-hidden="true">⌄</span></summary>
+      <summary><a className="nav-parent" href={`${homeTarget}#full-menu`} onClick={handleParentNavigate}>Menus</a><span aria-hidden="true">↓</span></summary>
       <div className="nav-popover">
         <a href={`${homeTarget}#full-menu`} onClick={handleNavigate}>Food</a>
         <a href={`${homeTarget}#drinks`} onClick={handleNavigate}>Drinks</a>
@@ -39,7 +43,7 @@ export default function HeaderNav({ locationSlug, hasReservations = false, isHom
     <a href={page("happenings")} onClick={handleNavigate}>Happenings</a>
     <a href={`${homeTarget}#locations`} onClick={handleNavigate}>Locations</a>
     <details className="nav-dropdown nav-dropdown-right" onToggle={handleToggle}>
-      <summary>Contact Us <span aria-hidden="true">⌄</span></summary>
+      <summary><a className="nav-parent" href={`${homeTarget}#contact`} onClick={handleParentNavigate}>Contact Us</a><span aria-hidden="true">↓</span></summary>
       <div className="nav-popover">
         <a href={page("private-dining")} onClick={handleNavigate}>Private Dining</a>
         <a href={page("franchise")} onClick={handleNavigate}>Franchising</a>

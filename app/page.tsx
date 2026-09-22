@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { DRINK_CATEGORIES, MENU_CATEGORIES } from "./menuData";
+import { DRINK_CATEGORIES, HAPPY_HOUR_CATEGORIES, MENU_CATEGORIES } from "./menuData";
 import AnnouncementBanner, { type AnnouncementHappening } from "./components/AnnouncementBanner";
 import HeaderNav from "./components/HeaderNav";
 import ResyEmbed from "./components/ResyEmbed";
@@ -227,8 +227,8 @@ export default function Home() {
   const [introPlaying, setIntroPlaying] = useState(true);
   const [activeMenuCategory, setActiveMenuCategory] = useState(MENU_CATEGORIES[0].name);
   const [activeDrinkCategory, setActiveDrinkCategory] = useState(DRINK_CATEGORIES[0].name);
-  const [happyHourCategories, setHappyHourCategories] = useState<typeof MENU_CATEGORIES>([]);
-  const [activeHappyHourCategory, setActiveHappyHourCategory] = useState("");
+  const [happyHourCategories, setHappyHourCategories] = useState(HAPPY_HOUR_CATEGORIES);
+  const [activeHappyHourCategory, setActiveHappyHourCategory] = useState(HAPPY_HOUR_CATEGORIES[0].name);
   const [popupOpen, setPopupOpen] = useState(false);
   const [insiderEmail, setInsiderEmail] = useState("");
   const [insiderStatus, setInsiderStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
@@ -463,8 +463,10 @@ export default function Home() {
             setDrinkCategories(cmsDrinks);
             setActiveDrinkCategory((current) => cmsDrinks.some((category: { name: string }) => category.name === current) ? current : cmsDrinks[0].name);
           }
-          setHappyHourCategories(cmsHappyHour);
-          setActiveHappyHourCategory((current) => cmsHappyHour.some((category: { name: string }) => category.name === current) ? current : (cmsHappyHour[0]?.name ?? ""));
+          if (cmsHappyHour.length > 0) {
+            setHappyHourCategories(cmsHappyHour);
+            setActiveHappyHourCategory((current) => cmsHappyHour.some((category: { name: string }) => category.name === current) ? current : cmsHappyHour[0].name);
+          }
         }
 
         if (Array.isArray(payload.campaigns) && payload.campaigns.length > 0) {
