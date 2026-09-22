@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import AnnouncementBanner, { type AnnouncementHappening } from "./AnnouncementBanner";
+import HeaderNav from "./HeaderNav";
 
 type HeaderLocation = {
   name: string;
@@ -12,27 +14,41 @@ type HeaderLocation = {
 
 export default function SiteHeader({ location }: { location: HeaderLocation }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [announcement, setAnnouncement] = useState<AnnouncementHappening | null>(null);
   const home = `/?location=${encodeURIComponent(location.slug)}`;
-  const contextualPage = (slug: string) => `/pages/${slug}?location=${encodeURIComponent(location.slug)}`;
 
-  return <header className="site-header interior-header header-visible header-scrolled">
+  useEffect(() => {
+    fetch("/api/cms")
+      .then((response) => response.json())
+      .then((payload) => {
+        const now = Date.now();
+        const match = (Array.isArray(payload.happenings) ? payload.happenings : [])
+          .filter((item: Record<string, unknown>) => item.enabled !== false && item.showInBanner === true)
+          .filter((item: Record<string, unknown>) => !item.startsAt || new Date(String(item.startsAt)).getTime() <= now)
+          .filter((item: Record<string, unknown>) => !item.endsAt || new Date(String(item.endsAt)).getTime() >= now)
+          .filter((item: Record<string, unknown>) => !Array.isArray(item.locations) || item.locations.length === 0 || item.locations.some((assigned: Record<string, unknown>) => assigned.slug === location.slug))
+          .sort((a: Record<string, unknown>, b: Record<string, unknown>) => Number(b.priority ?? 0) - Number(a.priority ?? 0))[0];
+        setAnnouncement(match ? {
+          slug: String(match.slug), title: String(match.title), eyebrow: match.eyebrow ? String(match.eyebrow) : undefined,
+          summary: match.summary ? String(match.summary) : undefined, buttonLabel: match.buttonLabel ? String(match.buttonLabel) : undefined,
+          buttonUrl: match.buttonUrl ? String(match.buttonUrl) : undefined, dismissalKey: match.dismissalKey ? String(match.dismissalKey) : undefined,
+        } : null);
+      })
+      .catch(() => setAnnouncement(null));
+  }, [location.slug]);
+
+  return <><header className="site-header interior-header header-visible header-scrolled">
     <Link className="brand" href={home} aria-label="Kitchen Master home">
       <span className="brand-mark">KM</span>
       <span>KITCHEN MASTER</span>
     </Link>
     <nav className={menuOpen ? "nav nav-open" : "nav"} aria-label="Main navigation">
-      <Link href={`${home}#menu`} onClick={() => setMenuOpen(false)}>Menu</Link>
-      <Link href={`${home}#drinks`} onClick={() => setMenuOpen(false)}>Drinks</Link>
-      {location.reservationUrl && <a href={location.reservationUrl} target={location.reservationUrl.startsWith("http") ? "_blank" : undefined} rel={location.reservationUrl.startsWith("http") ? "noreferrer" : undefined} onClick={() => setMenuOpen(false)}>Reserve</a>}
-      <Link href={`${home}#locations`} onClick={() => setMenuOpen(false)}>Locations</Link>
-      <Link href={contextualPage("private-dining")} onClick={() => setMenuOpen(false)}>Private Dining</Link>
-      <Link href={contextualPage("contact")} onClick={() => setMenuOpen(false)}>Contact</Link>
-      <Link href={`/careers/${location.slug}`} onClick={() => setMenuOpen(false)}>Careers</Link>
+      <HeaderNav locationSlug={location.slug} hasReservations={Boolean(location.reservationUrl)} onNavigate={() => setMenuOpen(false)} />
     </nav>
     <div className="header-actions interior-header-actions">
       <Link className="interior-location" href={`${home}#locations`}><span>Location</span><strong>{location.name}</strong></Link>
       {location.orderUrl && <a className="header-cta" href={location.orderUrl} target="_blank" rel="noreferrer">Order online</a>}
     </div>
     <button className="menu-toggle" onClick={() => setMenuOpen((open) => !open)} aria-expanded={menuOpen} aria-label="Toggle menu">{menuOpen ? "×" : "☰"}</button>
-  </header>;
+  </header><AnnouncementBanner item={announcement} locationSlug={location.slug} /></>;
 }

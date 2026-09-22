@@ -26,7 +26,7 @@ type SitePage = {
   documentId?: string;
   title: string;
   slug: string;
-  pageType?: "home" | "story" | "private-dining" | "contact" | "careers" | "franchise" | "custom";
+  pageType?: "home" | "story" | "private-dining" | "contact" | "careers" | "franchise" | "happenings" | "custom";
   location?: { slug?: string } | null;
   heroEyebrow?: string;
   heroTitle?: string;
@@ -39,6 +39,26 @@ type SitePage = {
   seoDescription?: string;
   canonicalUrl?: string;
   noIndex?: boolean;
+};
+
+type Happening = {
+  documentId?: string;
+  title: string;
+  slug: string;
+  happeningType?: "event" | "special";
+  enabled?: boolean;
+  featured?: boolean;
+  eyebrow?: string;
+  summary?: string;
+  details?: string;
+  startsAt?: string;
+  endsAt?: string;
+  schedule?: string;
+  buttonLabel?: string;
+  buttonUrl?: string;
+  image?: { url?: string };
+  locations?: Array<{ slug?: string }>;
+  priority?: number;
 };
 
 type Location = {
@@ -59,6 +79,7 @@ type Location = {
 type PublicContent = {
   pages?: SitePage[];
   locations?: Location[];
+  happenings?: Happening[];
   settings?: { contactEmail?: string; franchiseEmail?: string };
 };
 
@@ -94,6 +115,10 @@ const FALLBACK_PAGES: Record<string, SitePage> = {
       { eyebrow:"Start the conversation",heading:"Tell us where you want to grow.",body:"Share your target market, operating background, and investment readiness. Submitting an inquiry does not guarantee territory availability or approval; our team will follow up when there may be a fit." },
     ],formConfig:{formEyebrow:"Franchise inquiry",formTitle:"Introduce yourself.",formDescription:"Required fields help us route your message to the right team.",submitLabel:"Submit franchise inquiry",experienceOptions:["Restaurant owner or operator","Multi-unit operator","Hospitality management","Business ownership outside hospitality","New to ownership"],investmentRangeOptions:["Under $500,000","$500,000–$1 million","$1–$2 million","$2 million+"]},
   },
+  happenings: {
+    title:"Happenings",slug:"happenings",pageType:"happenings",heroEyebrow:"Specials · Events",heroTitle:"What’s happening",heroAccent:"at Kitchen Master.",
+    heroDescription:"Seasonal specials, happy hour notes, and gatherings worth putting on your calendar.",
+  },
 };
 
 async function getContent(preview = false, fresh = false): Promise<PublicContent> {
@@ -110,7 +135,7 @@ async function getContent(preview = false, fresh = false): Promise<PublicContent
 
 function resolvePage(content: PublicContent, slug: string, locationSlug?: string) {
   const fallback = FALLBACK_PAGES[slug];
-  const pageType = slug === "private-dining" || slug === "contact" || slug === "franchise" ? slug : null;
+  const pageType = slug === "private-dining" || slug === "contact" || slug === "franchise" || slug === "happenings" ? slug : null;
   const candidates = content.pages?.filter((page) => (pageType && page.pageType === pageType) || page.slug === slug || page.documentId === slug) ?? [];
   const globalPage = candidates.find((page) => !page.location);
   const locationPage = locationSlug ? candidates.find((page) => page.location?.slug === locationSlug) : undefined;
@@ -135,6 +160,23 @@ function imageUrl(page: SitePage) {
   const url = page.heroImage?.url;
   if (!url) return null;
   return url.startsWith("/") ? `${cmsUrl}${url}` : url;
+}
+
+function happeningImageUrl(item: Happening) {
+  const url = item.image?.url;
+  if (!url) return null;
+  return url.startsWith("/") ? `${cmsUrl}${url}` : url;
+}
+
+function happeningDate(item: Happening) {
+  if (item.schedule) return item.schedule;
+  if (!item.startsAt) return item.happeningType === "special" ? "Available now" : "Ongoing";
+  const start = new Date(item.startsAt);
+  const startLabel = start.toLocaleDateString("en-US", { month:"short", day:"numeric", year:start.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined });
+  if (!item.endsAt) return startLabel;
+  const end = new Date(item.endsAt);
+  const endLabel = end.toLocaleDateString("en-US", { month:"short", day:"numeric", year:end.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined });
+  return startLabel === endLabel ? startLabel : `${startLabel} — ${endLabel}`;
 }
 
 function locationField(locations: Location[], selected: Location) {
@@ -209,8 +251,15 @@ export default async function CmsPage({ params, searchParams }: { params:Promise
   if (!page) notFound();
   const background = imageUrl(page);
   const isInquiryPage = slug === "contact" || slug === "private-dining" || slug === "franchise";
+  const isHappeningsPage = slug === "happenings";
   const formConfig = page.formConfig ?? {};
   const locationCopy = (value: string) => value.replaceAll("{{location}}", selected.name);
+  const now = Date.now();
+  const happenings = (content.happenings ?? [])
+    .filter((item) => item.enabled !== false)
+    .filter((item) => !item.endsAt || new Date(item.endsAt).getTime() >= now)
+    .filter((item) => !item.locations?.length || item.locations.some((location) => location.slug === selected.slug))
+    .sort((a, b) => Number(b.featured) - Number(a.featured) || Number(b.priority ?? 0) - Number(a.priority ?? 0) || new Date(a.startsAt ?? 0).getTime() - new Date(b.startsAt ?? 0).getTime());
 
   return <main className="cms-page interior-page" style={background ? { backgroundImage:`linear-gradient(90deg,#11100ff2,#11100f88),url(${background})` } : undefined}>
     <SiteHeader location={selected} />
@@ -220,7 +269,24 @@ export default async function CmsPage({ params, searchParams }: { params:Promise
       {page.heroDescription && <p>{page.heroDescription}</p>}
     </section>
 
-    {isInquiryPage ? <section className="inquiry-layout">
+    {isHappeningsPage ? <section className="happenings-layout" aria-label={`Current happenings at Kitchen Master ${selected.name}`}>
+      <div className="happenings-intro"><small>NOW AT {selected.name.toUpperCase()}</small><h2>A good reason<br/>to come by.</h2><p>Only current and upcoming items for your selected restaurant appear here. Specials without a location apply across Kitchen Master.</p></div>
+      <div className="happenings-list">
+        {happenings.length ? happenings.map((item, index) => {
+          const image = happeningImageUrl(item);
+          return <article className={`happening-card${index === 0 ? " happening-card-featured" : ""}`} key={item.documentId || item.slug}>
+            {image && <div className="happening-image"><img src={image} alt="" /></div>}
+            <div className="happening-copy">
+              <div className="happening-meta"><span>{item.eyebrow || (item.happeningType === "special" ? "Special" : "Event")}</span><time>{happeningDate(item)}</time></div>
+              <h3>{item.title}</h3>
+              {item.summary && <p>{item.summary}</p>}
+              {item.details && <p className="happening-details">{item.details}</p>}
+              {item.buttonUrl && <a className="under-link" href={item.buttonUrl}>{item.buttonLabel || "Learn more"} <span>→</span></a>}
+            </div>
+          </article>;
+        }) : <div className="happenings-empty"><small>NOTHING SCHEDULED YET</small><h3>More is on the way.</h3><p>Check back soon for specials and upcoming events at {selected.name}.</p><a className="button button-red" href={`/?location=${selected.slug}#happy-hour`}>View happy hour →</a></div>}
+      </div>
+    </section> : isInquiryPage ? <section className="inquiry-layout">
       <div className="inquiry-copy">
         {page.sections?.map((section, index) => <article className="cms-content-block" key={index}>{section.eyebrow && <small>{section.eyebrow}</small>}{section.heading && <h2>{section.heading}</h2>}{section.body && <p>{section.body}</p>}</article>)}
         {(slug === "contact" || slug === "private-dining") && <aside className="page-location-card"><small>YOUR SELECTED RESTAURANT</small><h3>{selected.name}</h3><p>{selected.address}<br/>{selected.city}</p>{selected.phone && <a href={`tel:${selected.phone.replace(/[^\d+]/g, "")}`}>{selected.phone}</a>}{selected.hours && <p>{selected.hours}</p>}</aside>}

@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { DRINK_CATEGORIES, MENU_CATEGORIES } from "./menuData";
+import AnnouncementBanner, { type AnnouncementHappening } from "./components/AnnouncementBanner";
+import HeaderNav from "./components/HeaderNav";
 import ResyEmbed from "./components/ResyEmbed";
 
 type SiteSettings = {
@@ -25,6 +27,7 @@ type HomePageContent = {
   menuCard3Eyebrow:string;menuCard3Title:string;menuCard3ImageUrl?:string;
   foodMenuTitle:string;foodMenuDescription:string;foodMenuDisclaimer:string;
   drinkEyebrow:string;drinkTitle:string;drinkAccent:string;drinkDescription:string;drinkDisclaimer:string;
+  happyHourEyebrow:string;happyHourTitle:string;happyHourAccent:string;happyHourDescription:string;happyHourDisclaimer:string;
   featureEyebrow:string;featureTitle:string;featureAccent:string;featureBody:string;featureImageUrl?:string;
   privateDiningEyebrow:string;privateDiningTitle:string;privateDiningAccent:string;privateDiningBody:string;privateDiningImageUrl?:string;privateDiningCaption:string;
   socialEyebrow:string;socialTitle:string;socialAccent:string;socialBody:string;
@@ -45,6 +48,7 @@ const DEFAULT_HOME: HomePageContent = {
   menuCard1Eyebrow:"The signature",menuCard1Title:"Soup Dumplings",menuCard1ImageUrl:"/images/soup-dumplings.png",menuCard2Eyebrow:"From the wok",menuCard2Title:"Modern Plates",menuCard2ImageUrl:"/images/lamb-chop.png",menuCard3Eyebrow:"Made to share",menuCard3Title:"Small Plates",menuCard3ImageUrl:"/images/szechuan-wonton.png",
   foodMenuTitle:"The full menu.",foodMenuDescription:"Handcrafted daily. Menu availability and pricing may change. Please tell your server about any allergies before ordering.",foodMenuDisclaimer:"V · Vegetarian|Raw · May be served raw or undercooked|Parties of six or more are subject to 20% gratuity",
   drinkEyebrow:"From the bar",drinkTitle:"Pour something",drinkAccent:"memorable.",drinkDescription:"House cocktails inspired by Asian flavors, a considered wine and sake list, and thoughtful zero-proof drinks.",drinkDisclaimer:"Must be 21+ with valid identification|Selections and vintages may change|Please enjoy responsibly",
+  happyHourEyebrow:"A little earlier",happyHourTitle:"Happy hour.",happyHourAccent:"Well spent.",happyHourDescription:"Selected bites and pours at participating Kitchen Master restaurants. Times and availability vary by location.",happyHourDisclaimer:"Dine-in only|Participation, days, and times vary by location|Must be 21+ for alcoholic beverages",
   featureEyebrow:"Dinner, done differently",featureTitle:"A table worth",featureAccent:"gathering around.",featureBody:"From a quick dinner to a long celebration, every meal is made to be shared.",featureImageUrl:"/images/spread.jpg",
   privateDiningEyebrow:"Private dining",privateDiningTitle:"Your occasion.",privateDiningAccent:"Our craft.",privateDiningBody:"Host an intimate dinner or a full celebration in a space designed for memorable meals. Our team will help shape the room and menu around your event.",privateDiningImageUrl:"/images/private-room.png",privateDiningCaption:"Private rooms · Custom menus · Personal service",
   socialEyebrow:"From our guests",socialTitle:"Loved locally.",socialAccent:"Shared often.",socialBody:"See what guests are saying about Kitchen Master {{location}}, then follow along for new dishes and behind-the-scenes moments.",
@@ -59,7 +63,7 @@ function resolveHomepageSections(base: HomePageContent, sections: HomepageSectio
   const image = (item: HomepageSection | undefined, fallback?: string) => item?.image && typeof item.image === "object" && "url" in item.image
     ? String((item.image as { url: unknown }).url)
     : fallback;
-  const gateway=section("location-gateway"),reservations=section("reservations"),story=section("story"),featured=section("featured-menu"),food=section("food-menu"),drinks=section("drinks"),dining=section("dining-feature"),privateDining=section("private-dining"),social=section("social-proof"),locations=section("locations"),connect=section("connect"),footer=section("footer");
+  const gateway=section("location-gateway"),reservations=section("reservations"),story=section("story"),featured=section("featured-menu"),food=section("food-menu"),drinks=section("drinks"),happyHour=section("happy-hour"),dining=section("dining-feature"),privateDining=section("private-dining"),social=section("social-proof"),locations=section("locations"),connect=section("connect"),footer=section("footer");
   const cards=Array.isArray(featured?.items)?featured.items as Record<string,unknown>[]:[];
   const cardImages=Array.isArray(featured?.images)?featured.images as {url?:unknown}[]:[];
 
@@ -74,6 +78,7 @@ function resolveHomepageSections(base: HomePageContent, sections: HomepageSectio
     menuCard3Eyebrow:value(cards[2],"eyebrow",base.menuCard3Eyebrow),menuCard3Title:value(cards[2],"title",base.menuCard3Title),menuCard3ImageUrl:cardImages[2]?.url?String(cardImages[2].url):base.menuCard3ImageUrl,
     foodMenuTitle:value(food,"title",base.foodMenuTitle),foodMenuDescription:value(food,"body",base.foodMenuDescription),foodMenuDisclaimer:Array.isArray(food?.items)?food.items.map(String).join("|"):base.foodMenuDisclaimer,
     drinkEyebrow:value(drinks,"eyebrow",base.drinkEyebrow),drinkTitle:value(drinks,"title",base.drinkTitle),drinkAccent:value(drinks,"accent",base.drinkAccent),drinkDescription:value(drinks,"body",base.drinkDescription),drinkDisclaimer:Array.isArray(drinks?.items)?drinks.items.map(String).join("|"):base.drinkDisclaimer,
+    happyHourEyebrow:value(happyHour,"eyebrow",base.happyHourEyebrow),happyHourTitle:value(happyHour,"title",base.happyHourTitle),happyHourAccent:value(happyHour,"accent",base.happyHourAccent),happyHourDescription:value(happyHour,"body",base.happyHourDescription),happyHourDisclaimer:Array.isArray(happyHour?.items)?happyHour.items.map(String).join("|"):base.happyHourDisclaimer,
     featureEyebrow:value(dining,"eyebrow",base.featureEyebrow),featureTitle:value(dining,"title",base.featureTitle),featureAccent:value(dining,"accent",base.featureAccent),featureBody:value(dining,"body",base.featureBody),featureImageUrl:image(dining,base.featureImageUrl),
     privateDiningEyebrow:value(privateDining,"eyebrow",base.privateDiningEyebrow),privateDiningTitle:value(privateDining,"title",base.privateDiningTitle),privateDiningAccent:value(privateDining,"accent",base.privateDiningAccent),privateDiningBody:value(privateDining,"body",base.privateDiningBody),privateDiningImageUrl:image(privateDining,base.privateDiningImageUrl),privateDiningCaption:value(privateDining,"caption",base.privateDiningCaption),
     socialEyebrow:value(social,"eyebrow",base.socialEyebrow),socialTitle:value(social,"title",base.socialTitle),socialAccent:value(social,"accent",base.socialAccent),socialBody:value(social,"body",base.socialBody),
@@ -140,6 +145,15 @@ type Campaign = {
   finePrint?: string;
   dismissalKey: string;
   delayMs?: number;
+};
+
+type Happening = AnnouncementHappening & {
+  enabled?: boolean;
+  showInBanner?: boolean;
+  priority?: number;
+  startsAt?: string;
+  endsAt?: string;
+  locations?: Array<{ slug: string }>;
 };
 
 const FALLBACK_CAMPAIGNS: Campaign[] = [
@@ -213,12 +227,15 @@ export default function Home() {
   const [introPlaying, setIntroPlaying] = useState(true);
   const [activeMenuCategory, setActiveMenuCategory] = useState(MENU_CATEGORIES[0].name);
   const [activeDrinkCategory, setActiveDrinkCategory] = useState(DRINK_CATEGORIES[0].name);
+  const [happyHourCategories, setHappyHourCategories] = useState<typeof MENU_CATEGORIES>([]);
+  const [activeHappyHourCategory, setActiveHappyHourCategory] = useState("");
   const [popupOpen, setPopupOpen] = useState(false);
   const [insiderEmail, setInsiderEmail] = useState("");
   const [insiderStatus, setInsiderStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
   const [headerVisible, setHeaderVisible] = useState(true);
   const [pageScrolled, setPageScrolled] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>(FALLBACK_CAMPAIGNS);
+  const [happenings, setHappenings] = useState<Happening[]>([]);
   const selectedLocation = locations.find((location) => location.id === selectedId) ?? locations[0];
   const homePage = useMemo(() => resolveHomepageSections(baseHomePage, homepageSections, selectedId), [baseHomePage, homepageSections, selectedId]);
   const locationStates = Array.from(new Set(locations.map((location) => location.state)));
@@ -238,8 +255,15 @@ export default function Home() {
     .filter((campaign) => !campaign.endsAt || new Date(campaign.endsAt).getTime() >= now)
     .filter((campaign) => !campaign.locations?.length || campaign.locations.some((location) => location.slug === selectedId))
     .sort((a, b) => b.priority - a.priority)[0];
+  const activeAnnouncement = happenings
+    .filter((item) => item.enabled !== false && item.showInBanner)
+    .filter((item) => !item.startsAt || new Date(item.startsAt).getTime() <= now)
+    .filter((item) => !item.endsAt || new Date(item.endsAt).getTime() >= now)
+    .filter((item) => !item.locations?.length || item.locations.some((location) => location.slug === selectedId))
+    .sort((a, b) => Number(b.priority ?? 0) - Number(a.priority ?? 0))[0];
   const availableFoodCategories = foodCategories.filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId));
   const availableDrinkCategories = drinkCategories.filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId));
+  const availableHappyHourCategories = happyHourCategories.filter((category) => !category.locationSlugs?.length || category.locationSlugs.includes(selectedId));
   const menuCards = [
     { title:homePage.menuCard1Title,eyebrow:homePage.menuCard1Eyebrow,image:homePage.menuCard1ImageUrl },
     { title:homePage.menuCard2Title,eyebrow:homePage.menuCard2Eyebrow,image:homePage.menuCard2ImageUrl },
@@ -317,7 +341,10 @@ export default function Home() {
     if (availableDrinkCategories.length && !availableDrinkCategories.some((category) => category.name === activeDrinkCategory)) {
       setActiveDrinkCategory(availableDrinkCategories[0].name);
     }
-  }, [selectedId, foodCategories, drinkCategories]);
+    if (availableHappyHourCategories.length && !availableHappyHourCategories.some((category) => category.name === activeHappyHourCategory)) {
+      setActiveHappyHourCategory(availableHappyHourCategories[0].name);
+    }
+  }, [selectedId, foodCategories, drinkCategories, happyHourCategories]);
 
   useEffect(() => {
     const preview = new URLSearchParams(window.location.search).get("preview") === "1";
@@ -395,6 +422,7 @@ export default function Home() {
               menuCard3Eyebrow:text("menuCard3Eyebrow"),menuCard3Title:text("menuCard3Title"),menuCard3ImageUrl:media("menuCard3Image",DEFAULT_HOME.menuCard3ImageUrl),
               foodMenuTitle:text("foodMenuTitle"),foodMenuDescription:text("foodMenuDescription"),foodMenuDisclaimer:text("foodMenuDisclaimer"),
               drinkEyebrow:text("drinkEyebrow"),drinkTitle:text("drinkTitle"),drinkAccent:text("drinkAccent"),drinkDescription:text("drinkDescription"),drinkDisclaimer:text("drinkDisclaimer"),
+              happyHourEyebrow:text("happyHourEyebrow"),happyHourTitle:text("happyHourTitle"),happyHourAccent:text("happyHourAccent"),happyHourDescription:text("happyHourDescription"),happyHourDisclaimer:text("happyHourDisclaimer"),
               featureEyebrow:text("featureEyebrow"),featureTitle:text("featureTitle"),featureAccent:text("featureAccent"),featureBody:text("featureBody"),featureImageUrl:media("featureImage",DEFAULT_HOME.featureImageUrl),
               privateDiningEyebrow:text("privateDiningEyebrow"),privateDiningTitle:text("privateDiningTitle"),privateDiningAccent:text("privateDiningAccent"),privateDiningBody:text("privateDiningBody"),privateDiningImageUrl:media("privateDiningImage",DEFAULT_HOME.privateDiningImageUrl),privateDiningCaption:text("privateDiningCaption"),
               socialEyebrow:text("socialEyebrow"),socialTitle:text("socialTitle"),socialAccent:text("socialAccent"),socialBody:text("socialBody"),
@@ -409,7 +437,7 @@ export default function Home() {
         }
 
         if (Array.isArray(payload.menuCategories) && payload.menuCategories.length > 0) {
-          const normalizeCategories = (menuType: "food" | "drink") => payload.menuCategories
+          const normalizeCategories = (menuType: "food" | "drink" | "happy-hour") => payload.menuCategories
             .filter((category: Record<string, unknown>) => category.menuType === menuType)
             .map((category: Record<string, unknown>) => ({
               name: String(category.name),
@@ -426,6 +454,7 @@ export default function Home() {
             }));
           const cmsFood = normalizeCategories("food");
           const cmsDrinks = normalizeCategories("drink");
+          const cmsHappyHour = normalizeCategories("happy-hour");
           if (cmsFood.length > 0) {
             setFoodCategories(cmsFood);
             setActiveMenuCategory((current) => cmsFood.some((category: { name: string }) => category.name === current) ? current : cmsFood[0].name);
@@ -434,6 +463,8 @@ export default function Home() {
             setDrinkCategories(cmsDrinks);
             setActiveDrinkCategory((current) => cmsDrinks.some((category: { name: string }) => category.name === current) ? current : cmsDrinks[0].name);
           }
+          setHappyHourCategories(cmsHappyHour);
+          setActiveHappyHourCategory((current) => cmsHappyHour.some((category: { name: string }) => category.name === current) ? current : (cmsHappyHour[0]?.name ?? ""));
         }
 
         if (Array.isArray(payload.campaigns) && payload.campaigns.length > 0) {
@@ -444,6 +475,16 @@ export default function Home() {
             eyebrow:campaign.eyebrow ? String(campaign.eyebrow) : undefined,title:String(campaign.title ?? "Kitchen Master"),accent:campaign.accent ? String(campaign.accent) : undefined,
             body:campaign.body ? String(campaign.body) : undefined,buttonLabel:campaign.buttonLabel ? String(campaign.buttonLabel) : undefined,buttonUrl:campaign.buttonUrl ? String(campaign.buttonUrl) : undefined,
             finePrint:campaign.finePrint ? String(campaign.finePrint) : undefined,dismissalKey:String(campaign.dismissalKey ?? campaign.name ?? "campaign"),delayMs:Number(campaign.delayMs ?? 1200),
+          })));
+        }
+
+        if (Array.isArray(payload.happenings)) {
+          setHappenings(payload.happenings.map((item: Record<string, unknown>) => ({
+            slug:String(item.slug ?? item.documentId ?? "happening"),title:String(item.title ?? "Kitchen Master"),eyebrow:item.eyebrow ? String(item.eyebrow) : undefined,
+            summary:item.summary ? String(item.summary) : undefined,buttonLabel:item.buttonLabel ? String(item.buttonLabel) : undefined,buttonUrl:item.buttonUrl ? String(item.buttonUrl) : undefined,
+            dismissalKey:item.dismissalKey ? String(item.dismissalKey) : undefined,enabled:item.enabled !== false,showInBanner:item.showInBanner === true,priority:Number(item.priority ?? 0),
+            startsAt:item.startsAt ? String(item.startsAt) : undefined,endsAt:item.endsAt ? String(item.endsAt) : undefined,
+            locations:Array.isArray(item.locations) ? item.locations.map((location: Record<string, unknown>) => ({slug:String(location.slug)})) : [],
           })));
         }
       })
@@ -520,12 +561,7 @@ export default function Home() {
           <span>KITCHEN MASTER</span>
         </a>
         <nav className={menuOpen ? "nav nav-open" : "nav"} aria-label="Main navigation">
-          <a href="#menu" onClick={() => setMenuOpen(false)}>Menu</a>
-          <a href="#drinks" onClick={() => setMenuOpen(false)}>Drinks</a>
-          {selectedLocation.reservationUrl && <a href="#reservations" onClick={() => setMenuOpen(false)}>Reserve</a>}
-          <a href="#locations" onClick={() => setMenuOpen(false)}>Locations</a>
-          <a href="#events" onClick={() => setMenuOpen(false)}>Private Dining</a>
-          <a href="#contact" onClick={() => setMenuOpen(false)}>Join Our Team</a>
+          <HeaderNav locationSlug={selectedLocation.id} hasReservations={Boolean(selectedLocation.reservationUrl)} isHome onNavigate={() => setMenuOpen(false)} />
         </nav>
         <div className="header-actions">
           <label className="location-select">
@@ -538,6 +574,7 @@ export default function Home() {
         </div>
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Toggle menu">{menuOpen ? "×" : "☰"}</button>
       </header>
+      {locationChosen && !introPlaying && <AnnouncementBanner item={activeAnnouncement} locationSlug={selectedLocation.id} visible={headerVisible} />}
 
       <section className="hero" id="top" style={(selectedLocation.heroImageUrl || homePage.heroImageUrl) ? { backgroundImage: `url(${selectedLocation.heroImageUrl || homePage.heroImageUrl})` } : undefined}>
         <div className="hero-shade" />
@@ -617,6 +654,22 @@ export default function Home() {
           </div>
         ))}
         <div className="menu-disclaimer">{homePage.drinkDisclaimer.split("|").map((item)=><span key={item}>{item}</span>)}</div>
+      </section>
+
+      <section className="full-menu happy-hour-menu" id="happy-hour">
+        <div className="full-menu-head"><div><p className="kicker">{homePage.happyHourEyebrow}</p><h2>{homePage.happyHourTitle}<br /><em>{homePage.happyHourAccent}</em></h2></div><p>{homePage.happyHourDescription}</p></div>
+        {availableHappyHourCategories.length > 0 ? <>
+          <div className="menu-tabs" role="tablist" aria-label="Happy hour categories">
+            {availableHappyHourCategories.map((category) => <button role="tab" aria-selected={activeHappyHourCategory === category.name} className={activeHappyHourCategory === category.name ? "active" : ""} onClick={() => setActiveHappyHourCategory(category.name)} key={category.name}>{category.name}</button>)}
+          </div>
+          {availableHappyHourCategories.filter((category) => category.name === activeHappyHourCategory).map((category) => (
+            <div className="menu-panel" role="tabpanel" key={category.name}>
+              <div className="menu-panel-title"><span>乾杯</span><div><h3>{category.name}</h3>{category.note && <p>{category.note}</p>}</div></div>
+              <div className="menu-items">{category.items.map((item) => <article className="menu-item" key={item.name}><div className="menu-item-title"><h4>{item.name}</h4><span>{item.price}</span></div>{item.description && <p>{item.description}</p>}{item.tags && <div className="menu-tags">{item.tags.map((tag) => <small key={tag}>{tag}</small>)}</div>}</article>)}</div>
+            </div>
+          ))}
+        </> : <div className="menu-empty"><small>{selectedLocation.name.toUpperCase()}</small><p>Happy hour details for this restaurant are coming soon.</p></div>}
+        <div className="menu-disclaimer">{homePage.happyHourDisclaimer.split("|").map((item)=><span key={item}>{item}</span>)}</div>
       </section>
 
       <section className="feature">

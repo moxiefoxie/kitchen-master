@@ -59,6 +59,7 @@ export async function GET(incomingRequest: Request) {
       pages,
       homepageSections: absoluteMedia(content?.homepageSections ?? []),
       campaigns: absoluteMedia(content?.campaigns ?? []),
+      happenings: absoluteMedia(content?.happenings ?? []),
       preview: content?.preview ?? false,
     });
   } catch (error) {
