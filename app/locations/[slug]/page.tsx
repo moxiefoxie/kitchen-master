@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { STRAPI_URL as cmsUrl } from "@/lib/strapi";
 
 type Location = { name:string;slug:string;address:string;city:string;state:string;phone?:string;hours?:string;latitude?:number;longitude?:number;locationStatus?:string;orderUrl?:string;reservationUrl?:string;seoTitle?:string;seoDescription?:string };
-const cmsUrl = process.env.STRAPI_URL ?? process.env.NEXT_PUBLIC_STRAPI_URL;
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://kitchen-master-two.vercel.app";
 
 async function getLocation(slug:string):Promise<Location|null>{

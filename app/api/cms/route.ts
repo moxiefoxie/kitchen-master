@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-
-const cmsUrl = process.env.STRAPI_URL ?? process.env.NEXT_PUBLIC_STRAPI_URL;
+import { STRAPI_URL as cmsUrl } from "@/lib/strapi";
 
 async function request(path: string) {
   if (!cmsUrl) return null;

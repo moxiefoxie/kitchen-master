@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { STRAPI_URL as cmsUrl } from "@/lib/strapi";
 type SitePage={documentId?:string;title:string;slug:string;heroEyebrow?:string;heroTitle?:string;heroAccent?:string;heroDescription?:string;heroImage?:{url?:string};sections?:Array<{eyebrow?:string;heading?:string;body?:string;linkLabel?:string;linkUrl?:string}>;seoTitle?:string;seoDescription?:string;canonicalUrl?:string;noIndex?:boolean};
-const cmsUrl=process.env.STRAPI_URL??process.env.NEXT_PUBLIC_STRAPI_URL;const siteUrl=process.env.NEXT_PUBLIC_SITE_URL??"https://kitchen-master-two.vercel.app";
+const siteUrl=process.env.NEXT_PUBLIC_SITE_URL??"https://kitchen-master-two.vercel.app";
 const FALLBACK_PAGES:Record<string,SitePage>={
   "private-dining":{title:"Private Dining",slug:"private-dining",heroEyebrow:"Private dining",heroTitle:"Gather around",heroAccent:"our table.",heroDescription:"Plan a private dinner, celebration, or group dining experience with Kitchen Master.",sections:[{eyebrow:"Start planning",heading:"Make it memorable.",body:"Tell our team about your date, party size, preferred location, and the kind of occasion you’re planning.",linkLabel:"Email our events team",linkUrl:"mailto:Management@kitchenmasterga.com"}]},
   contact:{title:"Contact",slug:"contact",heroTitle:"Come say",heroAccent:"hello.",heroDescription:"Questions, feedback, and general inquiries for Kitchen Master."},
