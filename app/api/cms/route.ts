@@ -18,7 +18,11 @@ async function request(path: string) {
 function absoluteMedia<T>(media: T): T {
   if (!cmsUrl || !media) return media;
   if (Array.isArray(media)) return media.map(absoluteMedia) as T;
-  if (typeof media === "object" && "url" in media) {
+  if (typeof media === "object" && "url" in media && (
+    "mime" in media ||
+    "formats" in media ||
+    "provider" in media
+  )) {
     const item = media as Record<string, unknown>;
     if (typeof item.url === "string" && item.url.startsWith("/")) {
       return { ...item, url: `${cmsUrl.replace(/\/$/, "")}${item.url}` } as T;
