@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DRINK_CATEGORIES, MENU_CATEGORIES } from "./menuData";
 import ResyEmbed from "./components/ResyEmbed";
 
@@ -17,6 +17,7 @@ type SiteSettings = {
 type HomePageContent = {
   heroImageUrl?: string;
   gatewayEyebrow:string;gatewayTitle:string;gatewayAccent:string;gatewayDescription:string;
+  reservationEyebrow:string;reservationTitle:string;reservationAccent:string;reservationDescription:string;
   storyEyebrow:string;storyTitle:string;storyAccent:string;storyBody:string;storyImageUrl?:string;
   menuIntroEyebrow:string;menuIntroTitle:string;menuIntroAccent:string;
   menuCard1Eyebrow:string;menuCard1Title:string;menuCard1ImageUrl?:string;
@@ -26,11 +27,19 @@ type HomePageContent = {
   drinkEyebrow:string;drinkTitle:string;drinkAccent:string;drinkDescription:string;drinkDisclaimer:string;
   featureEyebrow:string;featureTitle:string;featureAccent:string;featureBody:string;featureImageUrl?:string;
   privateDiningEyebrow:string;privateDiningTitle:string;privateDiningAccent:string;privateDiningBody:string;privateDiningImageUrl?:string;privateDiningCaption:string;
-  connectEyebrow:string;connectTitle:string;connectAccent:string;footerTagline:string;footerCopyright:string;
+  socialEyebrow:string;socialTitle:string;socialAccent:string;socialBody:string;
+  locationsEyebrow:string;locationsTitle:string;locationsAccent:string;locationsBody:string;
+  connectEyebrow:string;connectTitle:string;connectAccent:string;connectItems:Array<{eyebrow:string;title:string;url:string}>;footerTagline:string;footerCopyright:string;
+};
+
+type HomepageSection = Record<string, unknown> & {
+  sectionKey?: string;
+  location?: { slug?: string } | null;
 };
 
 const DEFAULT_HOME: HomePageContent = {
   gatewayEyebrow:"Welcome to Kitchen Master",gatewayTitle:"Choose your",gatewayAccent:"location.",gatewayDescription:"Menus, reservations, hours, and restaurant details are tailored to your selected Kitchen Master.",
+  reservationEyebrow:"Reservations",reservationTitle:"Your table in",reservationAccent:"{{location}}.",reservationDescription:"Choose a date and party size here, then view live times and complete your reservation securely with our reservation partner.",
   storyEyebrow:"Our philosophy",storyTitle:"Old-world technique.",storyAccent:"New-world spirit.",storyBody:"At Kitchen Master, Taiwanese and Japanese traditions meet a modern American point of view. Every fold, slice, and sizzle reflects our dedication to craft, flavor, and ingredients prepared fresh each day.",storyImageUrl:"/images/dining.png",
   menuIntroEyebrow:"What we’re known for",menuIntroTitle:"Made with patience.",menuIntroAccent:"Remembered by flavor.",
   menuCard1Eyebrow:"The signature",menuCard1Title:"Soup Dumplings",menuCard1ImageUrl:"/images/soup-dumplings.png",menuCard2Eyebrow:"From the wok",menuCard2Title:"Modern Plates",menuCard2ImageUrl:"/images/lamb-chop.png",menuCard3Eyebrow:"Made to share",menuCard3Title:"Small Plates",menuCard3ImageUrl:"/images/szechuan-wonton.png",
@@ -38,15 +47,47 @@ const DEFAULT_HOME: HomePageContent = {
   drinkEyebrow:"From the bar",drinkTitle:"Pour something",drinkAccent:"memorable.",drinkDescription:"House cocktails inspired by Asian flavors, a considered wine and sake list, and thoughtful zero-proof drinks.",drinkDisclaimer:"Must be 21+ with valid identification|Selections and vintages may change|Please enjoy responsibly",
   featureEyebrow:"Dinner, done differently",featureTitle:"A table worth",featureAccent:"gathering around.",featureBody:"From a quick dinner to a long celebration, every meal is made to be shared.",featureImageUrl:"/images/spread.jpg",
   privateDiningEyebrow:"Private dining",privateDiningTitle:"Your occasion.",privateDiningAccent:"Our craft.",privateDiningBody:"Host an intimate dinner or a full celebration in a space designed for memorable meals. Our team will help shape the room and menu around your event.",privateDiningImageUrl:"/images/private-room.png",privateDiningCaption:"Private rooms · Custom menus · Personal service",
-  connectEyebrow:"More from Kitchen Master",connectTitle:"Come be part",connectAccent:"of the story.",footerTagline:"Tradition meets innovation.",footerCopyright:"© 2026 Kitchen Master",
+  socialEyebrow:"From our guests",socialTitle:"Loved locally.",socialAccent:"Shared often.",socialBody:"See what guests are saying about Kitchen Master {{location}}, then follow along for new dishes and behind-the-scenes moments.",
+  locationsEyebrow:"Our restaurants",locationsTitle:"Find your",locationsAccent:"Kitchen Master.",locationsBody:"Explore every Kitchen Master location and choose the restaurant you’d like to visit.",
+  connectEyebrow:"More from Kitchen Master",connectTitle:"Come be part",connectAccent:"of the story.",connectItems:[{eyebrow:"Questions & feedback",title:"Contact us",url:"/pages/contact"},{eyebrow:"Join our team",title:"Careers",url:"/careers/{{location}}"},{eyebrow:"Grow with us",title:"Franchise opportunities",url:"/pages/franchise"},{eyebrow:"Gather together",title:"Private dining",url:"/pages/private-dining"}],footerTagline:"Tradition meets innovation.",footerCopyright:"© 2026 Kitchen Master",
 };
+
+function resolveHomepageSections(base: HomePageContent, sections: HomepageSection[], locationSlug: string) {
+  const section = (key: string) => sections.find((item) => item.sectionKey === key && item.location?.slug === locationSlug)
+    ?? sections.find((item) => item.sectionKey === key && !item.location);
+  const value = (item: HomepageSection | undefined, key: string, fallback: string) => item?.[key] ? String(item[key]) : fallback;
+  const image = (item: HomepageSection | undefined, fallback?: string) => item?.image && typeof item.image === "object" && "url" in item.image
+    ? String((item.image as { url: unknown }).url)
+    : fallback;
+  const gateway=section("location-gateway"),reservations=section("reservations"),story=section("story"),featured=section("featured-menu"),food=section("food-menu"),drinks=section("drinks"),dining=section("dining-feature"),privateDining=section("private-dining"),social=section("social-proof"),locations=section("locations"),connect=section("connect"),footer=section("footer");
+  const cards=Array.isArray(featured?.items)?featured.items as Record<string,unknown>[]:[];
+  const cardImages=Array.isArray(featured?.images)?featured.images as {url?:unknown}[]:[];
+
+  return {
+    ...base,
+    gatewayEyebrow:value(gateway,"eyebrow",base.gatewayEyebrow),gatewayTitle:value(gateway,"title",base.gatewayTitle),gatewayAccent:value(gateway,"accent",base.gatewayAccent),gatewayDescription:value(gateway,"body",base.gatewayDescription),
+    reservationEyebrow:value(reservations,"eyebrow",base.reservationEyebrow),reservationTitle:value(reservations,"title",base.reservationTitle),reservationAccent:value(reservations,"accent",base.reservationAccent),reservationDescription:value(reservations,"body",base.reservationDescription),
+    storyEyebrow:value(story,"eyebrow",base.storyEyebrow),storyTitle:value(story,"title",base.storyTitle),storyAccent:value(story,"accent",base.storyAccent),storyBody:value(story,"body",base.storyBody),storyImageUrl:image(story,base.storyImageUrl),
+    menuIntroEyebrow:value(featured,"eyebrow",base.menuIntroEyebrow),menuIntroTitle:value(featured,"title",base.menuIntroTitle),menuIntroAccent:value(featured,"accent",base.menuIntroAccent),
+    menuCard1Eyebrow:value(cards[0],"eyebrow",base.menuCard1Eyebrow),menuCard1Title:value(cards[0],"title",base.menuCard1Title),menuCard1ImageUrl:cardImages[0]?.url?String(cardImages[0].url):base.menuCard1ImageUrl,
+    menuCard2Eyebrow:value(cards[1],"eyebrow",base.menuCard2Eyebrow),menuCard2Title:value(cards[1],"title",base.menuCard2Title),menuCard2ImageUrl:cardImages[1]?.url?String(cardImages[1].url):base.menuCard2ImageUrl,
+    menuCard3Eyebrow:value(cards[2],"eyebrow",base.menuCard3Eyebrow),menuCard3Title:value(cards[2],"title",base.menuCard3Title),menuCard3ImageUrl:cardImages[2]?.url?String(cardImages[2].url):base.menuCard3ImageUrl,
+    foodMenuTitle:value(food,"title",base.foodMenuTitle),foodMenuDescription:value(food,"body",base.foodMenuDescription),foodMenuDisclaimer:Array.isArray(food?.items)?food.items.map(String).join("|"):base.foodMenuDisclaimer,
+    drinkEyebrow:value(drinks,"eyebrow",base.drinkEyebrow),drinkTitle:value(drinks,"title",base.drinkTitle),drinkAccent:value(drinks,"accent",base.drinkAccent),drinkDescription:value(drinks,"body",base.drinkDescription),drinkDisclaimer:Array.isArray(drinks?.items)?drinks.items.map(String).join("|"):base.drinkDisclaimer,
+    featureEyebrow:value(dining,"eyebrow",base.featureEyebrow),featureTitle:value(dining,"title",base.featureTitle),featureAccent:value(dining,"accent",base.featureAccent),featureBody:value(dining,"body",base.featureBody),featureImageUrl:image(dining,base.featureImageUrl),
+    privateDiningEyebrow:value(privateDining,"eyebrow",base.privateDiningEyebrow),privateDiningTitle:value(privateDining,"title",base.privateDiningTitle),privateDiningAccent:value(privateDining,"accent",base.privateDiningAccent),privateDiningBody:value(privateDining,"body",base.privateDiningBody),privateDiningImageUrl:image(privateDining,base.privateDiningImageUrl),privateDiningCaption:value(privateDining,"caption",base.privateDiningCaption),
+    socialEyebrow:value(social,"eyebrow",base.socialEyebrow),socialTitle:value(social,"title",base.socialTitle),socialAccent:value(social,"accent",base.socialAccent),socialBody:value(social,"body",base.socialBody),
+    locationsEyebrow:value(locations,"eyebrow",base.locationsEyebrow),locationsTitle:value(locations,"title",base.locationsTitle),locationsAccent:value(locations,"accent",base.locationsAccent),locationsBody:value(locations,"body",base.locationsBody),
+    connectEyebrow:value(connect,"eyebrow",base.connectEyebrow),connectTitle:value(connect,"title",base.connectTitle),connectAccent:value(connect,"accent",base.connectAccent),connectItems:Array.isArray(connect?.items) ? (connect.items as Record<string,unknown>[]).map((item) => ({eyebrow:String(item.eyebrow ?? ""),title:String(item.title ?? ""),url:String(item.url ?? "#")})) : base.connectItems,footerTagline:value(footer,"title",base.footerTagline),footerCopyright:value(footer,"caption",base.footerCopyright),
+  };
+}
 
 const DEFAULT_SITE_SETTINGS: SiteSettings = {
   heroEyebrow: "Taiwanese craft · Japanese precision",
   heroTitle: "Tradition,",
   heroAccent: "mastered.",
   heroDescription: "Soup dumplings, fresh sushi, and bold modern plates—crafted daily in {{location}}.",
-  contactEmail: "Management@kitchenmasterga.com",
+  contactEmail: "switham.gca@gmail.com",
   instagramUrl: "https://www.instagram.com/kitchenmaster.ga/",
   facebookUrl: "https://www.facebook.com/kitchenmasterga/",
 };
@@ -73,6 +114,7 @@ type RestaurantLocation = {
   seoTitle?: string;
   seoDescription?: string;
   instagramUrl?: string;
+  facebookUrl?: string;
   googleReviewsUrl?: string;
   googleRating?: string;
   googleReviewCount?: string;
@@ -111,18 +153,21 @@ const DEFAULT_LOCATIONS: RestaurantLocation[] = [
     city: "Suwanee, GA 30024", phone: "470-589-1112", lat: 34.0236, lng: -84.0519, status: "open",
     hours: "Tue–Fri 4:30–10 · Sat 11–10 · Sun 12–9:30",
     orderUrl: "https://order.toasttab.com/online/kitchen-master-bistro-2-3131-lawrenceville-suwanee-rd-b5",
+    reservationUrl: "https://resy.com/cities/suwanee-ga/venues/kitchen-master-suwanee",
   },
   {
     id: "frisco", name: "Frisco", state: "Texas", address: "9285 Preston Rd",
     city: "Frisco, TX 75033", phone: "469-362-8001", lat: 33.1548354, lng: -96.8039115, status: "open",
     hours: "Mon–Thu 11–2:30, 4:30–9 · Fri–Sat until 9:30",
     orderUrl: "https://order.toasttab.com/online/kitchen-master-bistro-9285-preston-rd",
+    reservationUrl: "https://www.kitchenmasterbistro.com/reservations-frisco",
   },
   {
     id: "southlake", name: "Southlake", state: "Texas", address: "3311 E State Hwy 114",
     city: "Southlake, TX 76092", phone: "214-724-5600", lat: 32.9369978, lng: -97.1029086, status: "open",
     hours: "Tue–Thu 11–9 · Fri–Sat 11–10",
     orderUrl: "https://order.toasttab.com/online/kitchen-master-bistro-southlake-3311-w-state-hwy-114",
+    reservationUrl: "tel:+12147245600",
   },
   {
     id: "midtown", name: "Midtown Atlanta", state: "Georgia", address: "Address to be announced",
@@ -160,7 +205,8 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState("suwanee");
   const [locations, setLocations] = useState<RestaurantLocation[]>(DEFAULT_LOCATIONS);
   const [siteSettings, setSiteSettings] = useState(DEFAULT_SITE_SETTINGS);
-  const [homePage, setHomePage] = useState<HomePageContent>(DEFAULT_HOME);
+  const [baseHomePage, setHomePage] = useState<HomePageContent>(DEFAULT_HOME);
+  const [homepageSections, setHomepageSections] = useState<HomepageSection[]>([]);
   const [foodCategories, setFoodCategories] = useState(MENU_CATEGORIES);
   const [drinkCategories, setDrinkCategories] = useState(DRINK_CATEGORIES);
   const [locationChosen, setLocationChosen] = useState(false);
@@ -174,6 +220,8 @@ export default function Home() {
   const [pageScrolled, setPageScrolled] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>(FALLBACK_CAMPAIGNS);
   const selectedLocation = locations.find((location) => location.id === selectedId) ?? locations[0];
+  const homePage = useMemo(() => resolveHomepageSections(baseHomePage, homepageSections, selectedId), [baseHomePage, homepageSections, selectedId]);
+  const locationStates = Array.from(new Set(locations.map((location) => location.state)));
   const socialFallback = LOCATION_SOCIAL[selectedLocation.id] ?? LOCATION_SOCIAL.suwanee;
   const instagramHandle = selectedLocation.instagramUrl ? `@${selectedLocation.instagramUrl.replace(/\/$/, "").split("/").pop()}` : socialFallback.handle;
   const locationSocial = {
@@ -201,9 +249,18 @@ export default function Home() {
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
     const requestedLocation = search.get("location");
-    if (requestedLocation) setSelectedId(requestedLocation);
+    let locationTimer: number | undefined;
+    if (requestedLocation) {
+      locationTimer = window.setTimeout(() => {
+        setSelectedId(requestedLocation);
+        setLocationChosen(true);
+      }, 0);
+    }
     const timer = window.setTimeout(() => setIntroPlaying(false), 6500);
-    return () => window.clearTimeout(timer);
+    return () => {
+      if (locationTimer) window.clearTimeout(locationTimer);
+      window.clearTimeout(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -292,6 +349,7 @@ export default function Home() {
           seoTitle: location.seoTitle ? String(location.seoTitle) : undefined,
           seoDescription: location.seoDescription ? String(location.seoDescription) : undefined,
           instagramUrl: location.instagramUrl ? String(location.instagramUrl) : undefined,
+          facebookUrl: location.facebookUrl ? String(location.facebookUrl) : undefined,
           googleReviewsUrl: location.googleReviewsUrl ? String(location.googleReviewsUrl) : undefined,
           googleRating: location.googleRating != null ? String(location.googleRating) : undefined,
           googleReviewCount: location.googleReviewCount ? String(location.googleReviewCount) : undefined,
@@ -314,7 +372,8 @@ export default function Home() {
         }
 
         if (Array.isArray(payload.pages)) {
-          const cmsHome = payload.pages.find((page: Record<string, unknown>) => page.slug === "home");
+          const cmsHome = payload.pages.find((page: Record<string, unknown>) => page.pageType === "home" && !page.location)
+            ?? payload.pages.find((page: Record<string, unknown>) => page.slug === "home" && !page.location);
           if (cmsHome) {
             setSiteSettings((current) => ({
               ...current,
@@ -328,6 +387,7 @@ export default function Home() {
               ? String((cmsHome[key] as { url: unknown }).url) : fallback;
             setHomePage({
               heroImageUrl:media("heroImage"),gatewayEyebrow:text("gatewayEyebrow"),gatewayTitle:text("gatewayTitle"),gatewayAccent:text("gatewayAccent"),gatewayDescription:text("gatewayDescription"),
+              reservationEyebrow:text("reservationEyebrow"),reservationTitle:text("reservationTitle"),reservationAccent:text("reservationAccent"),reservationDescription:text("reservationDescription"),
               storyEyebrow:text("storyEyebrow"),storyTitle:text("storyTitle"),storyAccent:text("storyAccent"),storyBody:text("storyBody"),storyImageUrl:media("storyImage",DEFAULT_HOME.storyImageUrl),
               menuIntroEyebrow:text("menuIntroEyebrow"),menuIntroTitle:text("menuIntroTitle"),menuIntroAccent:text("menuIntroAccent"),
               menuCard1Eyebrow:text("menuCard1Eyebrow"),menuCard1Title:text("menuCard1Title"),menuCard1ImageUrl:media("menuCard1Image",DEFAULT_HOME.menuCard1ImageUrl),
@@ -337,32 +397,15 @@ export default function Home() {
               drinkEyebrow:text("drinkEyebrow"),drinkTitle:text("drinkTitle"),drinkAccent:text("drinkAccent"),drinkDescription:text("drinkDescription"),drinkDisclaimer:text("drinkDisclaimer"),
               featureEyebrow:text("featureEyebrow"),featureTitle:text("featureTitle"),featureAccent:text("featureAccent"),featureBody:text("featureBody"),featureImageUrl:media("featureImage",DEFAULT_HOME.featureImageUrl),
               privateDiningEyebrow:text("privateDiningEyebrow"),privateDiningTitle:text("privateDiningTitle"),privateDiningAccent:text("privateDiningAccent"),privateDiningBody:text("privateDiningBody"),privateDiningImageUrl:media("privateDiningImage",DEFAULT_HOME.privateDiningImageUrl),privateDiningCaption:text("privateDiningCaption"),
-              connectEyebrow:text("connectEyebrow"),connectTitle:text("connectTitle"),connectAccent:text("connectAccent"),footerTagline:text("footerTagline"),footerCopyright:text("footerCopyright"),
+              socialEyebrow:text("socialEyebrow"),socialTitle:text("socialTitle"),socialAccent:text("socialAccent"),socialBody:text("socialBody"),
+              locationsEyebrow:text("locationsEyebrow"),locationsTitle:text("locationsTitle"),locationsAccent:text("locationsAccent"),locationsBody:text("locationsBody"),
+              connectEyebrow:text("connectEyebrow"),connectTitle:text("connectTitle"),connectAccent:text("connectAccent"),connectItems:DEFAULT_HOME.connectItems,footerTagline:text("footerTagline"),footerCopyright:text("footerCopyright"),
             });
           }
         }
 
-        if (Array.isArray(payload.homepageSections) && payload.homepageSections.length) {
-          const section = (key: string) => payload.homepageSections.find((item: Record<string, unknown>) => item.sectionKey === key) as Record<string, unknown> | undefined;
-          const value = (item: Record<string, unknown> | undefined, key: string, fallback: string) => item?.[key] ? String(item[key]) : fallback;
-          const image = (item: Record<string, unknown> | undefined, fallback?: string) => item?.image && typeof item.image === "object" && "url" in item.image ? String((item.image as {url:unknown}).url) : fallback;
-          const gateway=section("location-gateway"),story=section("story"),featured=section("featured-menu"),food=section("food-menu"),drinks=section("drinks"),dining=section("dining-feature"),privateDining=section("private-dining"),connect=section("connect"),footer=section("footer");
-          const cards=Array.isArray(featured?.items)?featured.items as Record<string,unknown>[]:[];
-          const cardImages=Array.isArray(featured?.images)?featured.images as {url?:unknown}[]:[];
-          setHomePage((current)=>({
-            ...current,
-            gatewayEyebrow:value(gateway,"eyebrow",current.gatewayEyebrow),gatewayTitle:value(gateway,"title",current.gatewayTitle),gatewayAccent:value(gateway,"accent",current.gatewayAccent),gatewayDescription:value(gateway,"body",current.gatewayDescription),
-            storyEyebrow:value(story,"eyebrow",current.storyEyebrow),storyTitle:value(story,"title",current.storyTitle),storyAccent:value(story,"accent",current.storyAccent),storyBody:value(story,"body",current.storyBody),storyImageUrl:image(story,current.storyImageUrl),
-            menuIntroEyebrow:value(featured,"eyebrow",current.menuIntroEyebrow),menuIntroTitle:value(featured,"title",current.menuIntroTitle),menuIntroAccent:value(featured,"accent",current.menuIntroAccent),
-            menuCard1Eyebrow:value(cards[0],"eyebrow",current.menuCard1Eyebrow),menuCard1Title:value(cards[0],"title",current.menuCard1Title),menuCard1ImageUrl:cardImages[0]?.url?String(cardImages[0].url):current.menuCard1ImageUrl,
-            menuCard2Eyebrow:value(cards[1],"eyebrow",current.menuCard2Eyebrow),menuCard2Title:value(cards[1],"title",current.menuCard2Title),menuCard2ImageUrl:cardImages[1]?.url?String(cardImages[1].url):current.menuCard2ImageUrl,
-            menuCard3Eyebrow:value(cards[2],"eyebrow",current.menuCard3Eyebrow),menuCard3Title:value(cards[2],"title",current.menuCard3Title),menuCard3ImageUrl:cardImages[2]?.url?String(cardImages[2].url):current.menuCard3ImageUrl,
-            foodMenuTitle:value(food,"title",current.foodMenuTitle),foodMenuDescription:value(food,"body",current.foodMenuDescription),foodMenuDisclaimer:Array.isArray(food?.items)?food.items.map(String).join("|"):current.foodMenuDisclaimer,
-            drinkEyebrow:value(drinks,"eyebrow",current.drinkEyebrow),drinkTitle:value(drinks,"title",current.drinkTitle),drinkAccent:value(drinks,"accent",current.drinkAccent),drinkDescription:value(drinks,"body",current.drinkDescription),drinkDisclaimer:Array.isArray(drinks?.items)?drinks.items.map(String).join("|"):current.drinkDisclaimer,
-            featureEyebrow:value(dining,"eyebrow",current.featureEyebrow),featureTitle:value(dining,"title",current.featureTitle),featureAccent:value(dining,"accent",current.featureAccent),featureBody:value(dining,"body",current.featureBody),featureImageUrl:image(dining,current.featureImageUrl),
-            privateDiningEyebrow:value(privateDining,"eyebrow",current.privateDiningEyebrow),privateDiningTitle:value(privateDining,"title",current.privateDiningTitle),privateDiningAccent:value(privateDining,"accent",current.privateDiningAccent),privateDiningBody:value(privateDining,"body",current.privateDiningBody),privateDiningImageUrl:image(privateDining,current.privateDiningImageUrl),privateDiningCaption:value(privateDining,"caption",current.privateDiningCaption),
-            connectEyebrow:value(connect,"eyebrow",current.connectEyebrow),connectTitle:value(connect,"title",current.connectTitle),connectAccent:value(connect,"accent",current.connectAccent),footerTagline:value(footer,"title",current.footerTagline),footerCopyright:value(footer,"caption",current.footerCopyright),
-          }));
+        if (Array.isArray(payload.homepageSections)) {
+          setHomepageSections(payload.homepageSections as HomepageSection[]);
         }
 
         if (Array.isArray(payload.menuCategories) && payload.menuCategories.length > 0) {
@@ -479,8 +522,7 @@ export default function Home() {
         <nav className={menuOpen ? "nav nav-open" : "nav"} aria-label="Main navigation">
           <a href="#menu" onClick={() => setMenuOpen(false)}>Menu</a>
           <a href="#drinks" onClick={() => setMenuOpen(false)}>Drinks</a>
-          {selectedLocation.id === "suwanee" && <a href="#reservations" onClick={() => setMenuOpen(false)}>Reserve</a>}
-          <a href="#story" onClick={() => setMenuOpen(false)}>Our Story</a>
+          {selectedLocation.reservationUrl && <a href="#reservations" onClick={() => setMenuOpen(false)}>Reserve</a>}
           <a href="#locations" onClick={() => setMenuOpen(false)}>Locations</a>
           <a href="#events" onClick={() => setMenuOpen(false)}>Private Dining</a>
           <a href="#contact" onClick={() => setMenuOpen(false)}>Join Our Team</a>
@@ -497,19 +539,19 @@ export default function Home() {
         <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Toggle menu">{menuOpen ? "×" : "☰"}</button>
       </header>
 
-      <section className="hero" id="top" style={(homePage.heroImageUrl || selectedLocation.heroImageUrl) ? { backgroundImage: `url(${homePage.heroImageUrl || selectedLocation.heroImageUrl})` } : undefined}>
+      <section className="hero" id="top" style={(selectedLocation.heroImageUrl || homePage.heroImageUrl) ? { backgroundImage: `url(${selectedLocation.heroImageUrl || homePage.heroImageUrl})` } : undefined}>
         <div className="hero-shade" />
         <div className="hero-copy">
-          <p className="kicker">{siteSettings.heroEyebrow}</p>
-          <h1>{siteSettings.heroTitle}<br /><em>{siteSettings.heroAccent}</em></h1>
-          <p className="hero-sub">{siteSettings.heroDescription.replace("{{location}}", selectedLocation.name)}</p>
+          <p className="kicker">{selectedLocation.heroEyebrow || siteSettings.heroEyebrow}</p>
+          <h1>{selectedLocation.heroTitle || siteSettings.heroTitle}<br /><em>{selectedLocation.heroAccent || siteSettings.heroAccent}</em></h1>
+          <p className="hero-sub">{(selectedLocation.heroDescription || siteSettings.heroDescription).replace("{{location}}", selectedLocation.name)}</p>
           <div className="hero-actions">
             <a className="button button-red" href="#menu">Explore the menu <span>↗</span></a>
-            {selectedLocation.id === "suwanee" ? <a className="text-link" href="#reservations">Book a table <span>↓</span></a> : selectedLocation.status === "open" ? <a className="text-link" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order in {selectedLocation.name} <span>→</span></a> : <a className="text-link" href="#locations">Opening soon <span>↓</span></a>}
+            {selectedLocation.reservationUrl ? <a className="text-link" href="#reservations">Book a table <span>↓</span></a> : selectedLocation.status === "open" ? <a className="text-link" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order in {selectedLocation.name} <span>→</span></a> : <a className="text-link" href="#locations">Opening soon <span>↓</span></a>}
           </div>
         </div>
         <div className="hero-stamp"><span>小籠包</span><small>HANDCRAFTED<br />IN {selectedLocation.name.toUpperCase()}</small></div>
-        <a className="scroll-note" href="#story">SCROLL TO DISCOVER <span>↓</span></a>
+        <a className="scroll-note" href="#menu">SCROLL TO DISCOVER <span>↓</span></a>
       </section>
 
       <section className="location-bar">
@@ -520,22 +562,11 @@ export default function Home() {
           {locationState === "denied" && <span className="distance">Location unavailable — choose a restaurant below</span>}
           <button onClick={findNearest} disabled={locationState === "loading"}>{locationState === "loading" ? "Locating…" : "Use my location"}</button>
           <a href={`https://maps.google.com/?q=${encodeURIComponent(`${selectedLocation.address}, ${selectedLocation.city}`)}`} target="_blank" rel="noreferrer">Get directions ↗</a>
-          {selectedLocation.id === "suwanee" && <a className="location-book" href="#reservations">Book a table ↓</a>}
+          {selectedLocation.reservationUrl && <a className="location-book" href="#reservations">Book a table ↓</a>}
         </div>
       </section>
 
-      {selectedLocation.id === "suwanee" && <section className="reservations" id="reservations"><ResyEmbed /></section>}
-
-      <section className="story" id="story">
-        <div className="story-label"><span>01</span><p>{homePage.storyEyebrow}</p></div>
-        <div className="story-copy">
-          <p className="brush">匠</p>
-          <h2>{homePage.storyTitle}<br /><em>{homePage.storyAccent}</em></h2>
-          <p>{homePage.storyBody}</p>
-          <a className="under-link" href="#menu">OUR STORY <span>→</span></a>
-        </div>
-        <div className="story-image"><img src={homePage.storyImageUrl} alt="Kitchen Master dining room" /><span className="vertical-copy">CRAFTED WITH INTENTION</span></div>
-      </section>
+      {selectedLocation.reservationUrl && <section className="reservations" id="reservations"><ResyEmbed locationName={selectedLocation.name} reservationUrl={selectedLocation.reservationUrl} phone={selectedLocation.phone} content={{eyebrow:homePage.reservationEyebrow,title:homePage.reservationTitle,accent:homePage.reservationAccent,description:homePage.reservationDescription}} /></section>}
 
       <section className="menu-section" id="menu">
         <div className="section-head">
@@ -590,16 +621,16 @@ export default function Home() {
 
       <section className="feature">
         <div className="feature-image"><img src={homePage.featureImageUrl} alt="A spread of Kitchen Master dishes" /></div>
-        <div className="feature-copy"><p className="kicker">{homePage.featureEyebrow}</p><h2>{homePage.featureTitle}<br /><em>{homePage.featureAccent}</em></h2><p>{homePage.featureBody}</p><div>{selectedLocation.reservationUrl&&<a className="button button-light" href={selectedLocation.reservationUrl} target="_blank" rel="noreferrer">Book on Resy <span>↗</span></a>}<a className="text-link" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order pickup <span>→</span></a></div></div>
+        <div className="feature-copy"><p className="kicker">{homePage.featureEyebrow}</p><h2>{homePage.featureTitle}<br /><em>{homePage.featureAccent}</em></h2><p>{homePage.featureBody}</p><div>{selectedLocation.reservationUrl&&<a className="button button-light" href={selectedLocation.reservationUrl} target={selectedLocation.reservationUrl.startsWith("http")?"_blank":undefined} rel={selectedLocation.reservationUrl.startsWith("http")?"noreferrer":undefined}>Reserve a table <span>↗</span></a>}<a className="text-link" href={selectedLocation.orderUrl} target="_blank" rel="noreferrer">Order pickup <span>→</span></a></div></div>
       </section>
 
       <section className="events" id="events">
-        <div className="events-copy"><p className="kicker dark">{homePage.privateDiningEyebrow}</p><h2>{homePage.privateDiningTitle}<br /><em>{homePage.privateDiningAccent}</em></h2><p>{homePage.privateDiningBody}</p><a className="button button-dark" href="/pages/private-dining">Plan your event <span>↗</span></a></div>
+        <div className="events-copy"><p className="kicker dark">{homePage.privateDiningEyebrow}</p><h2>{homePage.privateDiningTitle}<br /><em>{homePage.privateDiningAccent}</em></h2><p>{homePage.privateDiningBody}</p><a className="button button-dark" href={`/pages/private-dining?location=${selectedLocation.id}`}>Plan your event <span>↗</span></a></div>
         <div className="events-image"><img src={homePage.privateDiningImageUrl} alt="Private dining room at Kitchen Master" /><span>{homePage.privateDiningCaption}</span></div>
       </section>
 
       <section className="social-proof" aria-labelledby="social-proof-title">
-        <div className="social-proof-head"><p className="kicker dark">From our guests</p><h2 id="social-proof-title">Loved locally.<br /><em>Shared often.</em></h2><p>See what guests are saying about Kitchen Master {selectedLocation.name}, then follow along for new dishes and behind-the-scenes moments.</p></div>
+        <div className="social-proof-head"><p className="kicker dark">{homePage.socialEyebrow}</p><h2 id="social-proof-title">{homePage.socialTitle}<br /><em>{homePage.socialAccent}</em></h2><p>{homePage.socialBody.replaceAll("{{location}}", selectedLocation.name)}</p></div>
         <div className="social-embeds">
           <div className="google-reviews-live">
             <div className="google-review-summary"><div><span className="google-g">G</span><small>GOOGLE REVIEWS · {selectedLocation.name}</small></div>{locationSocial.rating ? <><strong>{locationSocial.rating}</strong><div className="review-stars">★★★★★</div><p>{locationSocial.count}</p></> : <><strong>New</strong><p>Reviews will appear as this location opens.</p></>}</div>
@@ -613,10 +644,10 @@ export default function Home() {
       <section className="locations-section" id="locations" aria-labelledby="locations-title" style={{padding:"clamp(78px, 9vw, 130px) 7vw",background:"#171513",color:"white",scrollMarginTop:88}}>
         <div className="locations-section-head" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(min(100%, 360px), 1fr))",gap:"32px 8vw",alignItems:"end",marginBottom:58}}>
           <div>
-            <p className="kicker" style={{margin:"0 0 28px",fontSize:9,fontWeight:800,letterSpacing:2.5,textTransform:"uppercase",color:"#aaa39b"}}>Our restaurants</p>
-            <h2 id="locations-title" style={{margin:0,fontSize:"clamp(54px, 6vw, 86px)",fontWeight:400,lineHeight:.94,letterSpacing:-2}}>Find your<br /><em style={{color:"#b44a47",fontWeight:400}}>Kitchen Master.</em></h2>
+            <p className="kicker" style={{margin:"0 0 28px",fontSize:9,fontWeight:800,letterSpacing:2.5,textTransform:"uppercase",color:"#aaa39b"}}>{homePage.locationsEyebrow}</p>
+            <h2 id="locations-title" style={{margin:0,fontSize:"clamp(54px, 6vw, 86px)",fontWeight:400,lineHeight:.94,letterSpacing:-2}}>{homePage.locationsTitle}<br /><em style={{color:"#b44a47",fontWeight:400}}>{homePage.locationsAccent}</em></h2>
           </div>
-          <p style={{maxWidth:480,margin:0,color:"#aaa39b",font:"17px/1.7 Georgia, serif"}}>Explore every Kitchen Master location and choose the restaurant you’d like to visit.</p>
+          <p style={{maxWidth:480,margin:0,color:"#aaa39b",font:"17px/1.7 Georgia, serif"}}>{homePage.locationsBody}</p>
         </div>
         <div className="locations-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(min(100%, 250px), 1fr))",border:"1px solid #48433f"}}>
           {locations.map((location, index) => (
@@ -639,10 +670,11 @@ export default function Home() {
       <section className="connect" id="contact">
         <div className="connect-intro"><p className="kicker dark">{homePage.connectEyebrow}</p><h2>{homePage.connectTitle}<br />{homePage.connectAccent}</h2></div>
         <div className="connect-links">
-          <a href="/pages/contact"><span>01</span><div><small>Questions & feedback</small><strong>Contact us</strong></div><b>↗</b></a>
-          <a href={`/careers/${selectedLocation.id}`}><span>02</span><div><small>Join our {selectedLocation.name} team</small><strong>Careers</strong></div><b>↗</b></a>
-          <a href="/pages/franchise"><span>03</span><div><small>Grow with us</small><strong>Franchise opportunities</strong></div><b>↗</b></a>
-          <a href="/pages/private-dining"><span>04</span><div><small>Gather together</small><strong>Private dining</strong></div><b>↗</b></a>
+          {homePage.connectItems.map((item, index) => {
+            const interpolatedUrl = item.url.replaceAll("{{location}}", selectedLocation.id);
+            const href = interpolatedUrl.startsWith("/pages/") && !interpolatedUrl.includes("?") ? `${interpolatedUrl}?location=${selectedLocation.id}` : interpolatedUrl;
+            return <a href={href} key={`${item.title}-${index}`}><span>{String(index + 1).padStart(2, "0")}</span><div><small>{item.eyebrow.replaceAll("{{location}}", selectedLocation.name)}</small><strong>{item.title.replaceAll("{{location}}", selectedLocation.name)}</strong></div><b>↗</b></a>;
+          })}
         </div>
       </section>
 
@@ -671,8 +703,8 @@ export default function Home() {
       </div>}
 
       <footer>
-        <div className="footer-top"><div className="footer-brand"><span className="brand-mark">KM</span><h2>KITCHEN<br />MASTER</h2><p>{homePage.footerTagline}</p></div><div className="footer-locations"><small>GEORGIA</small><button onClick={() => showLocation("suwanee")}>Suwanee <span>→</span></button><button onClick={() => showLocation("midtown")}>Midtown Atlanta <em>Coming soon</em></button></div><div className="footer-locations"><small>TEXAS</small><button onClick={() => showLocation("frisco")}>Frisco <span>→</span></button><button onClick={() => showLocation("southlake")}>Southlake <span>→</span></button></div><div><small>FOLLOW</small><a href={siteSettings.instagramUrl} target="_blank" rel="noreferrer">Instagram ↗</a><a href={siteSettings.facebookUrl} target="_blank" rel="noreferrer">Facebook ↗</a></div></div>
-        <div className="footer-bottom"><span>{homePage.footerCopyright}</span><span>{siteSettings.contactEmail}</span><span>{selectedLocation.city}</span></div>
+        <div className="footer-top"><div className="footer-brand"><span className="brand-mark">KM</span><h2>KITCHEN<br />MASTER</h2><p>{homePage.footerTagline}</p></div>{locationStates.map((state) => <div className="footer-locations" key={state}><small>{state.toUpperCase()}</small>{locations.filter((location) => location.state === state).map((location) => <button key={location.id} onClick={() => showLocation(location.id)}>{location.name} {location.status === "open" ? <span>→</span> : <em>Coming soon</em>}</button>)}</div>)}<div><small>FOLLOW</small><a href={selectedLocation.instagramUrl || siteSettings.instagramUrl} target="_blank" rel="noreferrer">Instagram ↗</a><a href={selectedLocation.facebookUrl || siteSettings.facebookUrl} target="_blank" rel="noreferrer">Facebook ↗</a></div></div>
+        <div className="footer-bottom"><span>{homePage.footerCopyright}</span><span>{selectedLocation.contactEmail || siteSettings.contactEmail}</span><span>{selectedLocation.city}</span></div>
       </footer>
     </main>
   );

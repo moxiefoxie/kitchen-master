@@ -313,6 +313,8 @@ Add:
 ```env
 STRAPI_URL=http://localhost:1337
 STRAPI_PREVIEW_SECRET=YOUR_PREVIEW_SECRET
+HIRING_WEBHOOK_URL=https://example.com/your-hiring-workflow
+INQUIRY_WEBHOOK_URL=https://example.com/your-inquiry-workflow
 ```
 
 Replace:
@@ -333,6 +335,54 @@ under:
 PREVIEW_SECRET=
 ```
 
+`HIRING_WEBHOOK_URL` must accept a multipart form submission and send the
+application to the supplied `hiringEmail`. The website resolves that address
+from the selected location in Strapi and adds these trusted fields to the
+webhook payload: `location`, `locationName`, `hiringEmail`, and `source`.
+
+To configure a restaurant, open **Content Manager → Location** in Strapi and
+set **Hiring Email**. You can also set **Hiring Roles** to a JSON array such as
+`["Server", "Bartender", "Kitchen"]`; those values become that location's role
+options on `/careers/{location-slug}`. Publish the location after editing it.
+
+Contact and private-dining forms are also location-aware. Configure each
+restaurant's **Contact Email** and **Private Dining Email** under **Content
+Manager → Location**. Configure the global **Franchise Email** under **Site
+Settings**. `INQUIRY_WEBHOOK_URL` receives the validated form with a trusted
+`recipientEmail` field and must use that value as the message destination.
+
+The seeded testing recipient is `switham.gca@gmail.com` for contact, private
+dining, careers, and franchise inquiries. Those fields remain editable in
+Strapi. On startup, the bootstrap only migrates a missing value or the old
+`Management@kitchenmasterga.com` value, so a deliberately configured address
+will not be overwritten.
+
+## Global content and location overrides
+
+The site uses an inheritance model so editors do not have to duplicate every
+page for every restaurant:
+
+- In **Homepage Section**, leave **Location** empty to edit the global default.
+  To customize one section for one restaurant, create another entry with the
+  same **Section Key** and assign its **Location**.
+- In **Site Page**, leave **Location** empty for the global Contact, Private
+  Dining, Franchise, or Careers page. Create a second page with the same
+  **Page Type** and assign a location to override that page for that restaurant.
+  The slug can be unique; the website resolves these pages by Page Type and
+  Location. The page's **Form Config** JSON controls form headings, submit
+  labels, and select options, and can also be overridden by location.
+- In **Location**, edit restaurant details, location hero copy and image,
+  reservation/order links, social links, SEO, reviews, form recipients, and
+  hiring roles.
+- **Menu Category** and **Campaign** entries can be assigned to one or more
+  locations. An entry with no locations is shared by every restaurant.
+- **Site Settings** contains true site-wide fallbacks such as the default hero,
+  social links, and franchise recipient.
+
+After any edit, publish the entry. Location-specific content is preferred;
+when it is absent, the frontend automatically falls back to the published
+global entry.
+
 For example:
 
 **`cms/.env`**
@@ -346,6 +396,8 @@ PREVIEW_SECRET=abc123-really-long-random-value
 ```env
 STRAPI_URL=http://localhost:1337
 STRAPI_PREVIEW_SECRET=abc123-really-long-random-value
+HIRING_WEBHOOK_URL=https://example.com/your-hiring-workflow
+INQUIRY_WEBHOOK_URL=https://example.com/your-inquiry-workflow
 ```
 
 The frontend reads `STRAPI_URL` and proxies CMS requests through its own `/api/cms` endpoint.
