@@ -112,7 +112,8 @@ export async function sendTransactionalEmail(message: TransactionalEmail): Promi
   });
 
   if (!response?.ok) {
-    console.error(`[email] Resend email request failed with status ${response?.status ?? "network-error"}.`);
+    const details = response ? await response.text().catch(() => "") : "";
+    console.error(`[email] Resend email request failed with status ${response?.status ?? "network-error"}: ${details.slice(0, 1000)}`);
   }
   return { ok: response?.ok ?? false, status: response?.status ?? 502 };
 }
