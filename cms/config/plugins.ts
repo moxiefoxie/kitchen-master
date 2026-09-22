@@ -23,6 +23,12 @@ const deniedExecutableTypes = [
 ];
 
 const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin => ({
+  // Strapi Cloud injects this private plugin during deployment. This project
+  // does not define scheduled jobs, so keep the runner disabled rather than
+  // requiring Cloud-internal API credentials at application startup.
+  'cloud-cronjob-runner': {
+    enabled: false,
+  },
   'users-permissions': {
     config: {
       jwtManagement: 'refresh',
