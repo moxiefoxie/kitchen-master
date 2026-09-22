@@ -29,6 +29,7 @@ export type CareersLocation = {
     formTitle?: string;
     formDescription?: string;
     submitLabel?: string;
+    blurb?: { eyebrow?: string; heading?: string; body: string };
   };
 };
 
@@ -51,6 +52,7 @@ type CmsCareerPage = {
   heroTitle?: unknown;
   heroAccent?: unknown;
   heroDescription?: unknown;
+  sections?: unknown;
   formConfig?: unknown;
 };
 
@@ -97,6 +99,9 @@ export async function getCareersLocation(slug: string, fresh = false): Promise<C
   const formValue = (key: string) => typeof formConfig[key] === "string" && String(formConfig[key]).trim()
     ? String(formConfig[key])
     : undefined;
+  const section = Array.isArray(careerPage?.sections)
+    ? careerPage.sections.find((item) => item && typeof item === "object" && "body" in item && typeof item.body === "string" && item.body.trim()) as Record<string, unknown> | undefined
+    : undefined;
 
   return {
     name: location.name,
@@ -118,6 +123,11 @@ export async function getCareersLocation(slug: string, fresh = false): Promise<C
       formTitle: formValue("formTitle"),
       formDescription: formValue("formDescription"),
       submitLabel: formValue("submitLabel"),
+      blurb: section && typeof section.body === "string" ? {
+        eyebrow: typeof section.eyebrow === "string" ? section.eyebrow : undefined,
+        heading: typeof section.heading === "string" ? section.heading : undefined,
+        body: section.body,
+      } : undefined,
     } : undefined,
   };
 }

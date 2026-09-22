@@ -285,7 +285,7 @@ export default async function CmsPage({ params, searchParams }: { params:Promise
     }))} /> : isSpecialsPage ? <section className="specials-list" aria-label={`Current specials at Kitchen Master ${selected.name}`}>
       {specials.length ? specials.map((item) => <article className={happeningImageUrl(item) ? undefined : "special-card-no-image"} id={`special-${item.slug}`} key={item.documentId || item.slug}>
         {happeningImageUrl(item) && <img src={happeningImageUrl(item) as string} alt="" />}
-        <div><div className="special-meta"><span>{item.eyebrow || "Weekly special"}</span><span>{item.schedule || "Available now"}</span></div><h2>{item.title}</h2>{item.summary && <p>{item.summary}</p>}{item.details && <p className="special-details">{item.details}</p>}{item.buttonUrl && <a className="under-link" href={item.buttonUrl}>{item.buttonLabel || "Learn more"} <span>→</span></a>}</div>
+        <div><div className="special-meta"><span>{item.eyebrow || "Weekly special"}</span><span>{item.schedule || "Available now"}</span></div><h2>{item.title}</h2>{item.summary && <p>{item.summary}</p>}{item.details && <p className="special-details">{item.details}</p>}</div>
       </article>) : <div className="calendar-empty"><strong>No specials are posted yet.</strong><span>New dishes for {selected.name} will appear here.</span></div>}
     </section> : page.sections?.map((section, index) => <section className="cms-content-block" key={index}>{section.eyebrow && <small>{section.eyebrow}</small>}{section.heading && <h2>{section.heading}</h2>}{section.body && <p>{section.body}</p>}{section.linkUrl && <a className="button button-red" href={section.linkUrl}>{section.linkLabel || "Learn more"} →</a>}</section>)}
     </>}

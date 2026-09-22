@@ -24,7 +24,6 @@ export default function SiteHeader({ location }: { location: HeaderLocation }) {
         const now = Date.now();
         const match = (Array.isArray(payload.happenings) ? payload.happenings : [])
           .filter((item: Record<string, unknown>) => item.enabled !== false && item.showInBanner === true)
-          .filter((item: Record<string, unknown>) => !item.startsAt || new Date(String(item.startsAt)).getTime() <= now)
           .filter((item: Record<string, unknown>) => !item.endsAt || new Date(String(item.endsAt)).getTime() >= now)
           .filter((item: Record<string, unknown>) => !Array.isArray(item.locations) || item.locations.length === 0 || item.locations.some((assigned: Record<string, unknown>) => assigned.slug === location.slug))
           .sort((a: Record<string, unknown>, b: Record<string, unknown>) => Number(b.priority ?? 0) - Number(a.priority ?? 0))[0];

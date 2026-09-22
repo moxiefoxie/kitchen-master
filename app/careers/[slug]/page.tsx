@@ -11,7 +11,12 @@ export default async function CareersPage({ params, searchParams }: { params: Pr
   return <main className="careers-page interior-page">
     <SiteHeader location={location} />
     <section className="form-page-layout careers-layout">
-      <div className="form-page-copy careers-hero"><p className="kicker">{location.careerPage?.heroEyebrow || `Careers · ${location.state}`}</p><h1>{location.careerPage?.heroTitle || "Bring your craft"}<br /><em>{location.careerPage?.heroAccent || `to ${location.name}.`}</em></h1><p className="form-page-description">{location.careerPage?.heroDescription || "We’re always interested in thoughtful, hardworking people who care about hospitality. Tell us where you shine and attach your resume."}</p></div>
+      <div className="form-page-copy careers-hero">
+        <p className="kicker">{location.careerPage?.heroEyebrow || `Careers · ${location.state}`}</p>
+        <h1>{location.careerPage?.heroTitle || "Bring your craft"}<br /><em>{location.careerPage?.heroAccent || `to ${location.name}.`}</em></h1>
+        <p className="form-page-description">{location.careerPage?.heroDescription || "We’re always interested in thoughtful, hardworking people who care about hospitality. Tell us where you shine and attach your resume."}</p>
+        {location.careerPage?.blurb && <div className="careers-blurb"><small>{location.careerPage.blurb.eyebrow}</small>{location.careerPage.blurb.heading && <h2>{location.careerPage.blurb.heading}</h2>}<p>{location.careerPage.blurb.body}</p></div>}
+      </div>
       <div className="inquiry-panel">
       {query.submitted === "1" ? <section className="application-success"><h2>Application received.</h2><p>Thank you. The {location.name} team will be in touch if your experience matches an opening.</p></section> : <>
       <div className="inquiry-form-intro"><small>{location.careerPage?.formEyebrow || "JOIN THE TEAM"}</small><h2>{(location.careerPage?.formTitle || "Apply to {{location}}.").replaceAll("{{location}}", location.name)}</h2><p>{location.careerPage?.formDescription || "Choose your restaurant and tell us where you shine."}</p></div>
