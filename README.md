@@ -1,16 +1,118 @@
-# Running Kitchen Master Locally
+# Kitchen Master website
 
-This guide walks through running the Kitchen Master website locally from a fresh clone.
+This repository contains the Next.js website. The Strapi CMS is maintained in a
+separate repository and is commonly cloned into `cms/` for a two-terminal local
+workflow. The two directories have separate Git histories; commits made in one
+repository do not include changes from the other.
 
 The project consists of:
 
 * **Frontend:** Next.js 16 / React 19
-* **CMS:** Strapi 5
-* **Local database:** SQLite
+* **CMS:** Strapi 5 in [`moxiefoxie/kitchen-master-cms`](https://github.com/moxiefoxie/kitchen-master-cms)
+* **Local CMS database:** SQLite
 * **Frontend port:** `3000`
 * **CMS port:** `1337`
 
 The frontend requires Node.js `>=22.13.0`, while the CMS supports Node.js 20–26. **Node 22.x is therefore a good choice for the whole project.**
+
+## Project and service links
+
+| Service | Purpose | URL |
+| --- | --- | --- |
+| Production website | Public site | <https://kitchen-master-two.vercel.app> |
+| Vercel project | Deployments, logs, domains, and website environment variables | <https://vercel.com/nasa-capstone/kitchen-master> |
+| Production CMS admin | Edit and publish live content | <https://devoted-angel-d525a2a640.strapiapp.com/admin> |
+| Production CMS API | Verify the public content feed | <https://devoted-angel-d525a2a640.strapiapp.com/api/kitchen-master-content> |
+| Strapi Cloud | CMS deployments, runtime logs, and cloud environment variables | <https://cloud.strapi.io> |
+
+Access is account-based. Ask an owner to invite you to the **NASA Capstone**
+Vercel team, the Strapi Cloud project, and the Strapi production admin. Strapi
+Cloud access and Strapi admin access are separate permissions.
+
+## Fastest local start: website with the cloud CMS
+
+This is the quickest way to work on the website without running Strapi locally.
+The public content route does not currently require an API token.
+
+```bash
+git clone https://github.com/moxiefoxie/kitchen-master.git
+cd kitchen-master
+npm ci
+```
+
+Create `.env.local` in the repository root:
+
+```env
+STRAPI_URL=https://devoted-angel-d525a2a640.strapiapp.com
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+Then run `npm run dev` and open <http://localhost:3000>. This reads published
+content from the production CMS, so do not use draft-preview URLs unless you
+have been given the matching preview secret. CMS-driven pages work with this
+minimal file; local form and campaign delivery additionally requires the
+relevant Resend or webhook variables.
+
+## Connect this checkout to Vercel
+
+The project is owned by the **NASA Capstone** team and is named
+`kitchen-master`. From the website repository:
+
+```bash
+npx vercel login
+npx vercel link --project kitchen-master
+```
+
+Choose the NASA Capstone team and the existing `kitchen-master` project when
+prompted. Linking creates a local `.vercel/` directory, which is ignored by Git.
+
+Useful commands after linking:
+
+```bash
+# Open the linked project in the Vercel dashboard
+npx vercel open
+
+# List variable names without downloading their values
+npx vercel env ls
+
+# Run Next.js with Vercel Development variables without writing them to disk
+npx vercel env run -- npm run dev
+
+# Alternatively, write Development variables to the ignored .env.local file
+npx vercel env pull .env.local
+
+# Create a preview deployment
+npx vercel deploy
+
+# Deploy to production; use intentionally
+npx vercel deploy --prod
+```
+
+Normal GitHub workflow is preferred: branches and pull requests create Preview
+deployments, while the configured production branch (`main`) deploys to
+Production. Use the Vercel dashboard for deployment status, runtime logs, and
+environment-variable changes. A changed Production variable requires a new
+deployment before the running site receives it.
+
+Never commit `.env.local`, `.vercel/`, API keys, or values copied from Vercel.
+The production Resend key belongs in Vercel, not in Strapi or the repository.
+See Vercel's official [`vercel link`](https://vercel.com/docs/cli/link) and
+[`vercel env`](https://vercel.com/docs/cli/env) references for current CLI
+options.
+
+## Current production integration notes
+
+* `STRAPI_URL` points Vercel to the Strapi Cloud application above.
+* `RESEND_API_KEY` and `EMAIL_FROM` are website/Vercel variables because the
+  Next.js form routes send the email.
+* Until the restaurant domain is available, production uses Resend's temporary
+  sender (`onboarding@resend.dev`). This is suitable for testing with the
+  Resend account owner's address, not general public delivery.
+* Contact, private-dining, careers, and franchise recipients are managed in
+  Strapi. Location-specific recipients live on each **Location** record, and
+  the franchise fallback lives in **Site Settings**.
+* `STRAPI_PREVIEW_SECRET` in Vercel must match `PREVIEW_SECRET` in Strapi Cloud
+  for draft previews to work.
 
 ---
 
@@ -45,13 +147,25 @@ nvm use 22
 
 ---
 
-# 2. Clone the repository
+# 2. Clone both repositories
 
 Open Terminal, PowerShell, or the integrated terminal in VS Code.
 
 ```bash
 git clone https://github.com/moxiefoxie/kitchen-master.git
 cd kitchen-master
+git clone https://github.com/moxiefoxie/kitchen-master-cms.git cms
+```
+
+The nested `cms/` checkout is ignored by the website repository on purpose. Run
+Git commands from the appropriate directory:
+
+```bash
+# Website status
+git status
+
+# CMS status
+git -C cms status
 ```
 
 The important project structure is approximately:
@@ -61,7 +175,7 @@ kitchen-master/
 │
 ├── app/                 # Next.js website
 ├── public/              # Website images/static files
-├── cms/                 # Strapi CMS
+├── cms/                 # Separate kitchen-master-cms Git checkout
 │   ├── config/
 │   ├── src/
 │   ├── package.json
@@ -313,10 +427,12 @@ Add:
 ```env
 STRAPI_URL=http://localhost:1337
 STRAPI_PREVIEW_SECRET=YOUR_PREVIEW_SECRET
-NEXT_PUBLIC_SITE_URL=https://www.kitchenmasterbistro.com
-RESEND_API_KEY=re_your_full_access_api_key
-EMAIL_FROM=Kitchen Master Website <website@updates.kitchenmasterbistro.com>
-INSIDERS_SEGMENT_ID=your_resend_segment_id
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+# Add only when testing email delivery locally:
+# RESEND_API_KEY=re_replace_me
+# EMAIL_FROM=Kitchen Master <onboarding@resend.dev>
+# INSIDERS_SEGMENT_ID=your_development_segment_id
 ```
 
 Replace:
